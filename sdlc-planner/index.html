@@ -1,0 +1,2575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlanCraft SDLC - Universal Architecture & System Design Studio</title>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <!-- React, ReactDOM, Redux, React-Redux, Babel, and Mermaid CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/redux@4.2.1/dist/redux.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-redux@8.1.3/dist/react-redux.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+
+  <link rel="stylesheet" href="src/App.css" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- In-Browser React Application -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const { createStore, combineReducers } = Redux;
+    const { Provider, useSelector, useDispatch } = ReactRedux;
+
+    // --- TEMPLATES & PRELOADED BLUEPRINTS ---
+    const devConnectorBlueprint = {
+      id: 'devconnector',
+      name: 'DevConnector - Developer Social Network',
+      version: '2.0.0',
+      description: 'Social networking and professional portfolio hub for software engineers built on the MERN stack.',
+      targetStack: {
+        frontend: 'React 18, Redux, React-Router v6, Axios, Vanilla CSS System',
+        backend: 'Node.js, Express 5.x, JWT Authentication, Express-Validator',
+        database: 'MongoDB Atlas, Mongoose 9.x ODM',
+        external: 'GitHub REST API v3, Gravatar Avatar Service'
+      },
+      architecture: {
+        businessLayer: [
+          { id: 'b1', title: 'Developer Identity & Credential Isolation', desc: 'Email uniqueness enforcement, bcrypt salt cost 10, Gravatar avatar derivation, 100h JWT token lifecycle.' },
+          { id: 'b2', title: '1:1 Profile Invariant & Skill Normalization', desc: 'Strict 1:1 user-to-profile mapping, comma-separated skill normalization into trimmed arrays, chronological career timeline.' },
+          { id: 'b3', title: 'Social Interaction Idempotency', desc: 'Single like per user per post, unlike validation, author-only post and comment deletion authority.' },
+          { id: 'b4', title: 'Cascading Account Deletion', desc: 'Atomic or sequential account purge across posts, profile, and user credentials.' }
+        ],
+        dataLayer: [
+          { collection: 'users', type: 'Root Document', count: '1:N with posts', index: '{ email: 1 } (Unique)' },
+          { collection: 'profiles', type: 'Root Document with Subdocs', count: '1:1 with users', index: '{ user: 1 } (Unique), { skills: 1 }' },
+          { collection: 'posts', type: 'Root Document with Subdocs', count: '1:N with users', index: '{ user: 1 }, { date: -1 }' }
+        ],
+        functionalLayer: [
+          { method: 'POST', path: '/api/users', access: 'Public', desc: 'Register developer account and receive JWT' },
+          { method: 'POST', path: '/api/auth', access: 'Public', desc: 'Authenticate credentials and obtain JWT' },
+          { method: 'GET', path: '/api/auth', access: 'Private', desc: 'Get authenticated user object (sans password)' },
+          { method: 'GET', path: '/api/profile/me', access: 'Private', desc: 'Fetch authenticated user profile with user hydration' },
+          { method: 'POST', path: '/api/profile', access: 'Private', desc: 'Create or update developer profile' },
+          { method: 'GET', path: '/api/profile', access: 'Public', desc: 'List all community developer profiles' },
+          { method: 'PUT', path: '/api/profile/experience', access: 'Private', desc: 'Add job experience subdocument' },
+          { method: 'DELETE', path: '/api/profile/experience/:exp_id', access: 'Private', desc: 'Delete job experience by subdoc ID' },
+          { method: 'PUT', path: '/api/profile/education', access: 'Private', desc: 'Add academic education subdocument' },
+          { method: 'DELETE', path: '/api/profile/education/:edu_id', access: 'Private', desc: 'Delete education entry by subdoc ID' },
+          { method: 'GET', path: '/api/profile/github/:username', access: 'Public', desc: 'Fetch top 5 public repositories from GitHub API' },
+          { method: 'POST', path: '/api/posts', access: 'Private', desc: 'Publish discussion post to feed' },
+          { method: 'GET', path: '/api/posts', access: 'Private', desc: 'Fetch chronological feed sorted by date descending' },
+          { method: 'PUT', path: '/api/posts/like/:id', access: 'Private', desc: 'Idempotently like a post' },
+          { method: 'PUT', path: '/api/posts/unlike/:id', access: 'Private', desc: 'Retract like from a post' },
+          { method: 'POST', path: '/api/posts/comment/:id', access: 'Private', desc: 'Append comment to post discussion thread' },
+          { method: 'DELETE', path: '/api/posts/comment/:id/:comment_id', access: 'Private', desc: 'Remove comment (author authorized)' },
+          { method: 'DELETE', path: '/api/posts/:id', access: 'Private', desc: 'Delete post (author authorized)' },
+          { method: 'DELETE', path: '/api/profile', access: 'Private', desc: 'Cascading purge of account, profile, and posts' }
+        ]
+      },
+      erd: {
+        entities: [
+          {
+            id: 'ent_1',
+            name: 'USER',
+            description: 'Authentication identity and login record',
+            fields: [
+              { name: '_id', type: 'ObjectId', key: 'PK' },
+              { name: 'name', type: 'String', key: '' },
+              { name: 'email', type: 'String', key: 'UK' },
+              { name: 'password', type: 'String (Bcrypt)', key: '' },
+              { name: 'avatar', type: 'String (URL)', key: '' },
+              { name: 'date', type: 'Date', key: '' }
+            ]
+          },
+          {
+            id: 'ent_2',
+            name: 'PROFILE',
+            description: 'Developer career profile and resume metadata',
+            fields: [
+              { name: '_id', type: 'ObjectId', key: 'PK' },
+              { name: 'user', type: 'ObjectId', key: 'FK' },
+              { name: 'status', type: 'String', key: '' },
+              { name: 'skills', type: 'Array<String>', key: '' },
+              { name: 'company', type: 'String', key: '' },
+              { name: 'website', type: 'String', key: '' },
+              { name: 'githubusername', type: 'String', key: '' }
+            ]
+          },
+          {
+            id: 'ent_3',
+            name: 'EXPERIENCE',
+            description: 'Embedded career position subdocument',
+            fields: [
+              { name: '_id', type: 'ObjectId', key: 'PK' },
+              { name: 'title', type: 'String', key: '' },
+              { name: 'company', type: 'String', key: '' },
+              { name: 'from', type: 'Date', key: '' },
+              { name: 'to', type: 'Date', key: '' },
+              { name: 'current', type: 'Boolean', key: '' }
+            ]
+          },
+          {
+            id: 'ent_4',
+            name: 'POST',
+            description: 'Community feed discussion post',
+            fields: [
+              { name: '_id', type: 'ObjectId', key: 'PK' },
+              { name: 'user', type: 'ObjectId', key: 'FK' },
+              { name: 'text', type: 'String', key: '' },
+              { name: 'name', type: 'String', key: '' },
+              { name: 'avatar', type: 'String', key: '' },
+              { name: 'date', type: 'Date', key: '' }
+            ]
+          },
+          {
+            id: 'ent_5',
+            name: 'COMMENT',
+            description: 'Embedded comment inside post thread',
+            fields: [
+              { name: '_id', type: 'ObjectId', key: 'PK' },
+              { name: 'user', type: 'ObjectId', key: 'FK' },
+              { name: 'text', type: 'String', key: '' },
+              { name: 'date', type: 'Date', key: '' }
+            ]
+          },
+          {
+            id: 'ent_6',
+            name: 'LIKE',
+            description: 'Embedded reaction subdocument inside post',
+            fields: [
+              { name: '_id', type: 'ObjectId', key: 'PK' },
+              { name: 'user', type: 'ObjectId', key: 'FK' }
+            ]
+          }
+        ],
+        mermaidSyntax: `erDiagram
+    USER ||--o| PROFILE : "has"
+    USER ||--o{ POST : "authors"
+    USER ||--o{ COMMENT : "submits"
+    USER ||--o{ LIKE : "casts"
+    PROFILE ||--o{ EXPERIENCE : "contains"
+    POST ||--o{ LIKE : "receives"
+    POST ||--o{ COMMENT : "accumulates"
+
+    USER {
+        ObjectId _id PK
+        String name
+        String email UK
+        String password
+        String avatar
+        Date date
+    }
+    PROFILE {
+        ObjectId _id PK
+        ObjectId user FK
+        String status
+        Array_String skills
+        String company
+        String githubusername
+    }
+    EXPERIENCE {
+        ObjectId _id PK
+        String title
+        String company
+        Date from
+        Boolean current
+    }
+    POST {
+        ObjectId _id PK
+        ObjectId user FK
+        String text
+        String name
+        Date date
+    }
+    LIKE {
+        ObjectId _id PK
+        ObjectId user FK
+    }
+    COMMENT {
+        ObjectId _id PK
+        ObjectId user FK
+        String text
+        Date date
+    }`
+      },
+      diagrams: {
+        dfdLevel0: `graph TD
+    Developer([Developer Client])
+    GitHubAPI([External GitHub REST API])
+    Gravatar([Gravatar CDN])
+    
+    subgraph DevConnector System Boundary
+        CoreEngine[DevConnector Application Engine<br/>Express API & React SPA]
+    end
+
+    Developer -->|Credentials & Posts| CoreEngine
+    CoreEngine -->|JWT & Feed Streams| Developer
+    CoreEngine -->|Email MD5 Hash| Gravatar
+    Gravatar -->|Avatar URL| CoreEngine
+    CoreEngine -->|GitHub Handle| GitHubAPI
+    GitHubAPI -->|Repo JSON| CoreEngine`,
+        dfdLevel1: `graph TD
+    Client([Developer Client])
+    D1[(Users Store)]
+    D2[(Profiles Store)]
+    D3[(Posts Store)]
+    GitHub([GitHub API])
+
+    P1[1.0 Auth & Identity]
+    P2[2.0 Profile Management]
+    P3[3.0 Social Feed Engine]
+    P4[4.0 GitHub Ingestion]
+
+    Client -->|Credentials| P1
+    P1 -->|Write/Read| D1
+    P1 -->|JWT Token| Client
+    Client -->|Profile Data| P2
+    P2 -->|Write/Read| D2
+    P2 -->|Fetch Repos| P4
+    P4 -->|HTTP GET| GitHub
+    GitHub -->|Repo Data| P4
+    P4 -->|Hydrated Profile| Client
+    Client -->|Posts & Likes| P3
+    P3 -->|Mutate Feed| D3
+    D3 -->|Stream Feed| Client`,
+        classDiagram: `classDiagram
+    class User {
+        +ObjectId _id
+        +String name
+        +String email
+        +String password
+        +save() Promise
+    }
+    class Profile {
+        +ObjectId _id
+        +ObjectId user
+        +String status
+        +Array~String~ skills
+        +save() Promise
+    }
+    class Post {
+        +ObjectId _id
+        +ObjectId user
+        +String text
+        +Array~Like~ likes
+        +Array~Comment~ comments
+        +save() Promise
+    }
+    User "1" <-- "0..1" Profile : references
+    User "1" <-- "0..*" Post : authors`,
+        sequenceAuth: `sequenceDiagram
+    autonumber
+    actor Dev as Developer
+    participant UI as React Form
+    participant API as Express API (/api/users)
+    participant Bcrypt as Bcrypt Engine
+    participant DB as MongoDB (users)
+    participant JWT as JWT Engine
+
+    Dev->>UI: Submit Name, Email, Password
+    UI->>API: POST /api/users
+    API->>DB: User.findOne({ email })
+    alt Email taken
+        DB-->>API: User exists
+        API-->>UI: 400 Bad Request
+    else Email free
+        DB-->>API: null
+        API->>Bcrypt: hash(password, salt)
+        Bcrypt-->>API: hashedPassword
+        API->>DB: new User().save()
+        DB-->>API: Saved User (_id)
+        API->>JWT: sign({ user: { id } }, secret)
+        JWT-->>API: Token
+        API-->>UI: 200 OK { token }
+        UI->>Dev: Redirect /dashboard
+    end`
+      },
+      stories: [
+        { id: 'US-AUTH-01', title: 'Developer Registration', epic: 'AUTH', points: 5, priority: 'Must', status: 'Done', statement: 'As a new software developer, I want to create an account with my name, email, and password, so that I can establish an authenticated identity.' },
+        { id: 'US-AUTH-02', title: 'Developer Login', epic: 'AUTH', points: 3, priority: 'Must', status: 'Done', statement: 'As a registered developer, I want to log in with email and password, so that I can securely access my private dashboard.' },
+        { id: 'US-AUTH-03', title: 'Persistent Session Load', epic: 'AUTH', points: 2, priority: 'Must', status: 'Done', statement: 'As an authenticated developer, I want my session to remain active upon browser refresh.' },
+        { id: 'US-AUTH-04', title: 'User Logout', epic: 'AUTH', points: 1, priority: 'Must', status: 'Done', statement: 'As an authenticated developer, I want to log out to terminate my active session.' },
+        { id: 'US-AUTH-05', title: 'Private Route Protection', epic: 'AUTH', points: 2, priority: 'Must', status: 'Done', statement: 'As a system administrator, I want unauthenticated users redirected to /login.' },
+        { id: 'US-AUTH-06', title: 'Form Validation Alerts', epic: 'AUTH', points: 2, priority: 'Must', status: 'Done', statement: 'As a user, I want clear alert banners when validation rules fail.' },
+        { id: 'US-PROF-01', title: 'View Current Profile', epic: 'PROF', points: 2, priority: 'Must', status: 'Done', statement: 'As an authenticated developer, I want to view my dashboard portfolio summary.' },
+        { id: 'US-PROF-02', title: 'Create Developer Profile', epic: 'PROF', points: 3, priority: 'Must', status: 'Done', statement: 'As a developer, I want to create my profile with skills, status, and bio.' },
+        { id: 'US-PROF-03', title: 'Edit Developer Profile', epic: 'PROF', points: 2, priority: 'Must', status: 'Done', statement: 'As a developer, I want to update my existing portfolio fields.' },
+        { id: 'US-PROF-04', title: 'Add Experience', epic: 'PROF', points: 3, priority: 'Must', status: 'Done', statement: 'As a developer, I want to add job experience entries to my profile.' },
+        { id: 'US-PROF-05', title: 'Delete Experience', epic: 'PROF', points: 2, priority: 'Should', status: 'Done', statement: 'As a developer, I want to delete obsolete experience entries.' },
+        { id: 'US-PROF-06', title: 'Add Education', epic: 'PROF', points: 3, priority: 'Must', status: 'Done', statement: 'As a developer, I want to add university degrees and certifications.' },
+        { id: 'US-PROF-07', title: 'Delete Education', epic: 'PROF', points: 2, priority: 'Should', status: 'Done', statement: 'As a developer, I want to delete outdated education credentials.' },
+        { id: 'US-PROF-08', title: 'Browse Developer Directory', epic: 'PROF', points: 2, priority: 'Must', status: 'Done', statement: 'As a visitor, I want to browse all developer profiles in the community.' },
+        { id: 'US-PROF-09', title: 'Public Profile & GitHub Repos', epic: 'PROF', points: 5, priority: 'Must', status: 'Done', statement: 'As a visitor, I want to inspect a developer profile and see their top 5 GitHub repos.' },
+        { id: 'US-POST-01', title: 'Create Discussion Post', epic: 'POST', points: 3, priority: 'Must', status: 'Done', statement: 'As an authenticated developer, I want to publish a post to the feed.' },
+        { id: 'US-POST-02', title: 'View Chronological Feed', epic: 'POST', points: 2, priority: 'Must', status: 'Done', statement: 'As a developer, I want to read posts in reverse chronological order.' },
+        { id: 'US-POST-03', title: 'View Post Discussion Thread', epic: 'POST', points: 2, priority: 'Must', status: 'Done', statement: 'As a developer, I want to view a single post and all its comments.' },
+        { id: 'US-POST-04', title: 'Author Deletes Own Post', epic: 'POST', points: 3, priority: 'Must', status: 'Done', statement: 'As a post author, I want to delete my own post from the feed.' },
+        { id: 'US-POST-05', title: 'Prevent Non-Author Post Delete', epic: 'POST', points: 2, priority: 'Must', status: 'Done', statement: 'As a defender, I want unauthorized deletion attempts rejected with 401.' },
+        { id: 'US-POST-06', title: 'Idempotent Post Like', epic: 'POST', points: 3, priority: 'Must', status: 'Done', statement: 'As a developer, I want to like a post at most once.' },
+        { id: 'US-POST-07', title: 'Unlike Post', epic: 'POST', points: 2, priority: 'Must', status: 'Done', statement: 'As a developer who liked a post, I want to remove my like.' },
+        { id: 'US-POST-08', title: 'Add Comment to Post', epic: 'POST', points: 3, priority: 'Must', status: 'Done', statement: 'As an authenticated developer, I want to comment on a discussion post.' },
+        { id: 'US-POST-09', title: 'Author Deletes Comment', epic: 'POST', points: 3, priority: 'Must', status: 'Done', statement: 'As a comment author, I want to remove my comment from a thread.' },
+        { id: 'US-SYS-01', title: 'Cascading Account Deletion', epic: 'SYS', points: 8, priority: 'Must', status: 'Done', statement: 'As a user, I want to delete my account and purge all posts, profile, and credentials.' },
+        { id: 'US-SYS-02', title: 'Defensive ObjectId Catching', epic: 'SYS', points: 2, priority: 'Should', status: 'Done', statement: 'As a developer, I want malformed ObjectId requests caught and returned as 404.' }
+      ],
+      roadmap: [
+        { id: 'r1', horizon: 'Horizon 1 (0-3 Months)', title: 'Cursor-Based Pagination', status: 'Planned', impact: 'High', desc: 'Eliminate unbounded Post.find() queries using keyset pagination with cursor and limit.' },
+        { id: 'r2', horizon: 'Horizon 1 (0-3 Months)', title: 'Dual-Token Refresh Architecture', status: 'Planned', impact: 'High', desc: 'Implement 15-minute access tokens + rotated HttpOnly refresh tokens in Redis.' },
+        { id: 'r3', horizon: 'Horizon 1 (0-3 Months)', title: 'Cloudinary / AWS S3 Media Uploads', status: 'Planned', impact: 'Medium', desc: 'Allow custom avatar and image uploads instead of Gravatar-only derivation.' },
+        { id: 'r4', horizon: 'Horizon 2 (3-6 Months)', title: 'Socket.io Real-Time Notifications', status: 'Planned', impact: 'High', desc: 'Instant push notifications for likes, comments, and mentions over WebSockets.' },
+        { id: 'r5', horizon: 'Horizon 2 (3-6 Months)', title: 'Redis Cache for Profile & GitHub APIs', status: 'Planned', impact: 'High', desc: 'Cache GitHub repository responses and developer profiles with TTL.' },
+        { id: 'r6', horizon: 'Horizon 3 (6-12 Months)', title: 'Microservices Fleet & Kafka Event Bus', status: 'Planned', impact: 'Critical', desc: 'Decompose monolith into Auth, Profile, Feed, and Chat microservices.' }
+      ]
+    };
+
+    const ecommerceBlueprint = {
+      id: 'ecommerce',
+      name: 'NexusMarket - E-Commerce & Marketplace Platform',
+      version: '1.0.0',
+      description: 'Enterprise multi-vendor e-commerce platform with catalog, cart, Stripe payments, and logistics.',
+      targetStack: {
+        frontend: 'React 18, Redux Toolkit, CSS System',
+        backend: 'Node.js, Express, Stripe SDK, BullMQ Queue',
+        database: 'PostgreSQL, Prisma ORM, Redis Cache',
+        external: 'Stripe Payments, AWS S3 Assets, SendGrid Email'
+      },
+      architecture: {
+        businessLayer: [
+          { id: 'b1', title: 'Inventory Reservation & Atomic Locks', desc: 'Cart items temporarily reserve inventory during checkout session with 15-minute TTL.' },
+          { id: 'b2', title: 'Payment Webhook Reconciler', desc: 'Stripe webhook listener idempotently verifies charge.succeeded and transitions order to Paid.' }
+        ],
+        dataLayer: [
+          { collection: 'users', type: 'Table', count: '1:N with orders', index: 'email (Unique)' },
+          { collection: 'products', type: 'Table', count: '1:N with order_items', index: 'sku (Unique)' },
+          { collection: 'orders', type: 'Table', count: '1:N with order_items', index: 'user_id, status' }
+        ],
+        functionalLayer: [
+          { method: 'GET', path: '/api/products', access: 'Public', desc: 'List active catalog products with filtering' },
+          { method: 'POST', path: '/api/checkout', access: 'Private', desc: 'Initialize Stripe payment intent session' }
+        ]
+      },
+      erd: {
+        entities: [
+          { id: 'ec_1', name: 'CUSTOMER', fields: [{ name: 'id', type: 'UUID', key: 'PK' }, { name: 'email', type: 'String', key: 'UK' }] },
+          { id: 'ec_2', name: 'ORDER', fields: [{ name: 'id', type: 'UUID', key: 'PK' }, { name: 'customer_id', type: 'UUID', key: 'FK' }, { name: 'total_cents', type: 'Integer', key: '' }] }
+        ],
+        mermaidSyntax: `erDiagram
+    CUSTOMER ||--o{ ORDER : "places"
+    CUSTOMER {
+        UUID id PK
+        String email UK
+    }
+    ORDER {
+        UUID id PK
+        UUID customer_id FK
+        Integer total_cents
+    }`
+      },
+      diagrams: {
+        dfdLevel0: `graph TD
+    Shopper([Shopper])
+    Stripe([Stripe Payment Gateway])
+    subgraph NexusMarket
+        Core[Core Store Engine]
+    end
+    Shopper -->|Order & Pay| Core
+    Core -->|Payment Intent| Stripe
+    Stripe -->|charge.succeeded| Core`,
+        dfdLevel1: `graph TD
+    Client([Shopper])
+    P1[Catalog Service]
+    P2[Checkout Service]
+    Client --> P1
+    Client --> P2`,
+        classDiagram: `classDiagram
+    class Customer {
+        +UUID id
+        +String email
+    }
+    class Order {
+        +UUID id
+        +Integer totalCents
+    }
+    Customer "1" <-- "0..*" Order : places`,
+        sequenceAuth: `sequenceDiagram
+    Shopper->>API: POST /api/checkout
+    API->>Stripe: createIntent()
+    Stripe-->>API: client_secret
+    API-->>Shopper: Confirm Payment`
+      },
+      stories: [
+        { id: 'US-EC-01', title: 'Product Catalog Browsing', epic: 'CATALOG', points: 3, priority: 'Must', status: 'Done', statement: 'As a shopper, I want to browse products with filtering.' },
+        { id: 'US-EC-02', title: 'Stripe Card Checkout', epic: 'PAY', points: 5, priority: 'Must', status: 'Done', statement: 'As a buyer, I want to pay securely via credit card using Stripe.' }
+      ],
+      roadmap: [
+        { id: 'ec_r1', horizon: 'Horizon 1 (0-3 Months)', title: 'Apple Pay & Google Pay Express Checkout', status: 'Planned', impact: 'High', desc: 'Integrate one-click mobile wallet payments.' }
+      ]
+    };
+
+    const blankBlueprint = {
+      id: 'blank',
+      name: 'Custom Application Blueprint',
+      version: '1.0.0',
+      description: 'Clean architectural canvas to plan any web application, API, or distributed service from inception.',
+      targetStack: {
+        frontend: 'Custom Frontend Stack',
+        backend: 'Custom Backend Stack',
+        database: 'Custom Database Tier',
+        external: 'Cloud Services & APIs'
+      },
+      architecture: {
+        businessLayer: [
+          { id: 'b1', title: 'Primary Domain Invariant', desc: 'Define your business rules and governance policies.' }
+        ],
+        dataLayer: [
+          { collection: 'primary_entity', type: 'Table / Collection', count: '1:N', index: 'id (PK)' }
+        ],
+        functionalLayer: [
+          { method: 'GET', path: '/api/v1/health', access: 'Public', desc: 'System health check diagnostic probe' }
+        ]
+      },
+      erd: {
+        entities: [
+          { id: 'e1', name: 'CORE_ENTITY', fields: [{ name: 'id', type: 'UUID / ObjectId', key: 'PK' }, { name: 'created_at', type: 'Timestamp', key: '' }] }
+        ],
+        mermaidSyntax: `erDiagram
+    CORE_ENTITY {
+        UUID id PK
+        Timestamp created_at
+    }`
+      },
+      diagrams: {
+        dfdLevel0: `graph TD
+    User([User])
+    subgraph System
+        App[Custom Application]
+    end
+    User --> App`,
+        dfdLevel1: `graph TD
+    Client([Client])
+    P1[Service 1.0]
+    Client --> P1`,
+        classDiagram: `classDiagram
+    class DomainEntity {
+        +UUID id
+    }`,
+        sequenceAuth: `sequenceDiagram
+    Client->>Server: Request
+    Server-->>Client: Response`
+      },
+      stories: [
+        { id: 'US-01', title: 'Initial Project Inception', epic: 'CORE', points: 3, priority: 'Must', status: 'To Do', statement: 'As an architect, I want to define the core system boundaries.' }
+      ],
+      roadmap: [
+        { id: 'r1', horizon: 'Horizon 1 (0-3 Months)', title: 'MVP Baseline Release', status: 'Planned', impact: 'Critical', desc: 'Launch foundational features.' }
+      ]
+    };
+
+    // --- REDUX REDUCERS & STORE ---
+    const initialProjectState = {
+      currentProject: devConnectorBlueprint,
+      activeTemplateId: 'devconnector',
+      activeTab: 'overview'
+    };
+
+    function projectReducer(state = initialProjectState, action) {
+      switch (action.type) {
+        case 'LOAD_TEMPLATE':
+          return { ...state, currentProject: action.payload, activeTemplateId: action.payload.id };
+        case 'SET_TAB':
+          return { ...state, activeTab: action.payload };
+        case 'UPDATE_METADATA':
+          return { ...state, currentProject: { ...state.currentProject, ...action.payload } };
+        case 'ADD_ENTITY':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              erd: {
+                ...state.currentProject.erd,
+                entities: [...(state.currentProject.erd?.entities || []), action.payload]
+              }
+            }
+          };
+        case 'DELETE_ENTITY':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              erd: {
+                ...state.currentProject.erd,
+                entities: state.currentProject.erd?.entities.filter(e => e.id !== action.payload)
+              }
+            }
+          };
+        case 'UPDATE_ERD_SYNTAX':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              erd: { ...state.currentProject.erd, mermaidSyntax: action.payload }
+            }
+          };
+        case 'UPDATE_DIAGRAM':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              diagrams: { ...state.currentProject.diagrams, [action.payload.key]: action.payload.syntax }
+            }
+          };
+        case 'ADD_STORY':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              stories: [action.payload, ...(state.currentProject.stories || [])]
+            }
+          };
+        case 'UPDATE_STORY':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              stories: state.currentProject.stories.map(s => s.id === action.payload.id ? action.payload : s)
+            }
+          };
+        case 'DELETE_STORY':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              stories: state.currentProject.stories.filter(s => s.id !== action.payload)
+            }
+          };
+        case 'ADD_BUSINESS_RULE':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              architecture: {
+                ...state.currentProject.architecture,
+                businessLayer: [...(state.currentProject.architecture?.businessLayer || []), action.payload]
+              }
+            }
+          };
+        case 'DELETE_BUSINESS_RULE':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              architecture: {
+                ...state.currentProject.architecture,
+                businessLayer: state.currentProject.architecture?.businessLayer.filter(b => b.id !== action.payload)
+              }
+            }
+          };
+        case 'ADD_ENDPOINT':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              architecture: {
+                ...state.currentProject.architecture,
+                functionalLayer: [...(state.currentProject.architecture?.functionalLayer || []), action.payload]
+              }
+            }
+          };
+        case 'DELETE_ENDPOINT':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              architecture: {
+                ...state.currentProject.architecture,
+                functionalLayer: state.currentProject.architecture?.functionalLayer.filter((_, idx) => idx !== action.payload)
+              }
+            }
+          };
+        case 'ADD_ROADMAP':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              roadmap: [...(state.currentProject.roadmap || []), action.payload]
+            }
+          };
+        case 'DELETE_ROADMAP':
+          return {
+            ...state,
+            currentProject: {
+              ...state.currentProject,
+              roadmap: state.currentProject.roadmap.filter(r => r.id !== action.payload)
+            }
+          };
+        case 'IMPORT_JSON':
+          return { ...state, currentProject: action.payload, activeTemplateId: 'custom' };
+        case 'EXTEND_PROJECT': {
+          const current = state.currentProject;
+          const { businessRules, dataLayer, functionalLayer, erdEntities, stories, roadmap, erdMermaidDelta } = action.payload;
+          const newBusiness = [...(current.architecture?.businessLayer || []), ...(businessRules || [])];
+          const newData = [...(current.architecture?.dataLayer || []), ...(dataLayer || [])];
+          const newFunctional = [...(current.architecture?.functionalLayer || []), ...(functionalLayer || [])];
+          const newEntities = [...(current.erd?.entities || []), ...(erdEntities || [])];
+          const newStories = [...(stories || []), ...(current.stories || [])];
+          const newRoadmap = [...(current.roadmap || []), ...(roadmap || [])];
+
+          let newMermaid = current.erd?.mermaidSyntax || 'erDiagram';
+          if (erdMermaidDelta) {
+            newMermaid += '\n' + erdMermaidDelta;
+          } else if (erdEntities && erdEntities.length > 0) {
+            erdEntities.forEach(e => {
+              newMermaid += `\n    ${e.name} {\n        UUID id PK\n    }`;
+            });
+          }
+
+          return {
+            ...state,
+            currentProject: {
+              ...current,
+              architecture: {
+                ...current.architecture,
+                businessLayer: newBusiness,
+                dataLayer: newData,
+                functionalLayer: newFunctional
+              },
+              erd: {
+                ...current.erd,
+                entities: newEntities,
+                mermaidSyntax: newMermaid
+              },
+              stories: newStories,
+              roadmap: newRoadmap
+            }
+          };
+        }
+        default:
+          return state;
+      }
+    }
+
+    function alertReducer(state = [], action) {
+      switch (action.type) {
+        case 'SET_ALERT':
+          return [...state, action.payload];
+        case 'REMOVE_ALERT':
+          return state.filter(a => a.id !== action.payload);
+        default:
+          return state;
+      }
+    }
+
+    const rootStore = createStore(combineReducers({
+      project: projectReducer,
+      alert: alertReducer
+    }));
+
+    // --- HELPER COMPONENT: MERMAID VIEWER ---
+    const MermaidViewer = ({ chartCode, id = 'chart' }) => {
+      const containerRef = useRef(null);
+      const [svgContent, setSvgContent] = useState('');
+      const [error, setError] = useState(null);
+
+      useEffect(() => {
+        let isMounted = true;
+        const renderChart = async () => {
+          try {
+            setError(null);
+            if (window.mermaid) {
+              window.mermaid.initialize({
+                startOnLoad: false,
+                theme: 'dark',
+                securityLevel: 'loose',
+                themeVariables: {
+                  darkMode: true,
+                  background: '#0f172a',
+                  primaryColor: '#1e293b',
+                  primaryTextColor: '#f8fafc',
+                  primaryBorderColor: '#38bdf8',
+                  lineColor: '#818cf8',
+                  secondaryColor: '#334155'
+                }
+              });
+
+              const uniqueId = `svg_${id}_${Date.now()}`;
+              const { svg } = await window.mermaid.render(uniqueId, chartCode.trim());
+              if (isMounted) setSvgContent(svg);
+            }
+          } catch (err) {
+            if (isMounted) setError(err.message || 'Diagram syntax error');
+          }
+        };
+
+        renderChart();
+        return () => { isMounted = false; };
+      }, [chartCode, id]);
+
+      if (error) {
+        return (
+          <div className="card" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }}>
+            <p style={{ color: '#fca5a5', fontSize: '0.85rem' }}>
+              <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: '6px' }}></i>
+              Diagram Warning: {error}
+            </p>
+            <pre style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#94a3b8' }}>{chartCode}</pre>
+          </div>
+        );
+      }
+
+      return (
+        <div
+          ref={containerRef}
+          className="diagram-canvas"
+          dangerouslySetInnerHTML={{ __html: svgContent || '<p style="color:#64748b;">Generating visualization...</p>' }}
+        />
+      );
+    };
+
+    // --- MARKDOWN SPEC COMPILER ---
+    function compileMarkdownSpec(project) {
+      const dateStr = new Date().toISOString().split('T')[0];
+      let md = `# ${project.name} - SDLC System Architecture & Planning Specification\n\n`;
+      md += `> **Version**: ${project.version || '1.0.0'}  \n`;
+      md += `> **Generated Date**: ${dateStr}  \n`;
+      md += `> **System Scope**: ${project.description}  \n\n---\n\n`;
+
+      if (project.targetStack) {
+        md += `## 1. Target Technology Stack\n\n`;
+        md += `| Tier | Technology Components |\n| :--- | :--- |\n`;
+        md += `| **Frontend** | ${project.targetStack.frontend} |\n`;
+        md += `| **Backend** | ${project.targetStack.backend} |\n`;
+        md += `| **Database** | ${project.targetStack.database} |\n`;
+        md += `| **External / Cloud** | ${project.targetStack.external} |\n\n`;
+      }
+
+      md += `## 2. Multi-Tier Layered Architecture Design\n\n`;
+      md += `### 2.1 Business Layer Policies & Domain Invariants\n\n`;
+      (project.architecture?.businessLayer || []).forEach(b => {
+        md += `- **${b.title}**: ${b.desc}\n`;
+      });
+
+      md += `\n### 2.2 Data Layer Schema & Storage Strategy\n\n`;
+      md += `| Collection / Table | Storage Type | Cardinality | Indexing Strategy |\n| :--- | :--- | :--- | :--- |\n`;
+      (project.architecture?.dataLayer || []).forEach(d => {
+        md += `| \`${d.collection}\` | ${d.type} | ${d.count} | ${d.index} |\n`;
+      });
+
+      md += `\n### 2.3 Functional Layer REST API Contracts\n\n`;
+      md += `| Method | Path | Access | Responsibility |\n| :--- | :--- | :--- | :--- |\n`;
+      (project.architecture?.functionalLayer || []).forEach(f => {
+        md += `| \`${f.method}\` | \`${f.path}\` | ${f.access} | ${f.desc} |\n`;
+      });
+
+      md += `\n---\n\n## 3. Entity Relationship Diagram (ERD)\n\n`;
+      if (project.erd?.mermaidSyntax) {
+        md += `\`\`\`mermaid\n${project.erd.mermaidSyntax}\n\`\`\`\n\n`;
+      }
+
+      md += `### Data Dictionary\n\n`;
+      (project.erd?.entities || []).forEach(ent => {
+        md += `#### Entity: \`${ent.name}\` (${ent.description || ''})\n\n`;
+        md += `| Field Name | Type | Key |\n| :--- | :--- | :---: |\n`;
+        (ent.fields || []).forEach(f => {
+          md += `| \`${f.name}\` | ${f.type} | ${f.key || '-'} |\n`;
+        });
+        md += `\n`;
+      });
+
+      md += `---\n\n## 4. System Flows & UML Diagrams\n\n`;
+      if (project.diagrams?.dfdLevel0) {
+        md += `### 4.1 Data Flow Diagram (DFD Level 0 - Context)\n\n\`\`\`mermaid\n${project.diagrams.dfdLevel0}\n\`\`\`\n\n`;
+      }
+      if (project.diagrams?.dfdLevel1) {
+        md += `### 4.2 Data Flow Diagram (DFD Level 1 - Decomposition)\n\n\`\`\`mermaid\n${project.diagrams.dfdLevel1}\n\`\`\`\n\n`;
+      }
+      if (project.diagrams?.classDiagram) {
+        md += `### 4.3 UML Class Diagram\n\n\`\`\`mermaid\n${project.diagrams.classDiagram}\n\`\`\`\n\n`;
+      }
+      if (project.diagrams?.sequenceAuth) {
+        md += `### 4.4 Event Sequence Diagram\n\n\`\`\`mermaid\n${project.diagrams.sequenceAuth}\n\`\`\`\n\n`;
+      }
+
+      md += `---\n\n## 5. Agile User Stories & Story Points Backlog\n\n`;
+      const totalPts = (project.stories || []).reduce((acc, s) => acc + (parseInt(s.points) || 0), 0);
+      md += `**Total Estimated Velocity**: **${totalPts} Story Points** across **${(project.stories || []).length} user stories**.\n\n`;
+      md += `| ID | Epic | Title | Points | Priority | Status | User Story Statement |\n| :--- | :---: | :--- | :---: | :---: | :---: | :--- |\n`;
+      (project.stories || []).forEach(s => {
+        md += `| \`${s.id}\` | ${s.epic} | ${s.title} | ${s.points} pts | ${s.priority} | ${s.status} | ${s.statement} |\n`;
+      });
+
+      md += `\n---\n\n## 6. Further Work & Engineering Horizons\n\n`;
+      md += `| Horizon | Initiative | Impact | Status | Description |\n| :--- | :--- | :---: | :---: | :--- |\n`;
+      (project.roadmap || []).forEach(r => {
+        md += `| ${r.horizon} | **${r.title}** | ${r.impact} | ${r.status} | ${r.desc} |\n`;
+      });
+
+      return md;
+    }
+
+    // --- COMPONENT: TOP NAVBAR WITH TABS ---
+    const Navbar = () => {
+      const dispatch = useDispatch();
+      const currentProject = useSelector(state => state.project.currentProject);
+      const activeTemplateId = useSelector(state => state.project.activeTemplateId);
+      const activeTab = useSelector(state => state.project.activeTab);
+
+      const triggerAlert = (msg, alertType = 'info') => {
+        const id = 'alt_' + Date.now();
+        dispatch({ type: 'SET_ALERT', payload: { msg, alertType, id } });
+        setTimeout(() => dispatch({ type: 'REMOVE_ALERT', payload: id }), 3500);
+      };
+
+      const handleTemplateChange = (e) => {
+        const val = e.target.value;
+        let bp = devConnectorBlueprint;
+        if (val === 'ecommerce') bp = ecommerceBlueprint;
+        if (val === 'blank') bp = blankBlueprint;
+        dispatch({ type: 'LOAD_TEMPLATE', payload: JSON.parse(JSON.stringify(bp)) });
+        triggerAlert(`Switched to "${bp.name}" architecture blueprint`, 'success');
+      };
+
+      const handleExportJSON = () => {
+        const str = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(currentProject, null, 2));
+        const a = document.createElement('a');
+        a.href = str;
+        a.download = `${currentProject.id || 'project'}_sdlc_plan.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        triggerAlert('Project JSON downloaded successfully', 'info');
+      };
+
+      const handleImportJSON = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            try {
+              const data = JSON.parse(ev.target.result);
+              dispatch({ type: 'IMPORT_JSON', payload: data });
+              triggerAlert(`Imported "${data.name || 'Custom Plan'}"`, 'success');
+            } catch (err) {
+              triggerAlert('Failed to parse JSON file', 'danger');
+            }
+          };
+          reader.readAsText(file);
+        }
+      };
+
+      const tabs = [
+        { id: 'overview', label: '1. Overview & Stack', icon: 'fa-gauge-high' },
+        { id: 'architecture', label: '2. Layered Architecture', icon: 'fa-layer-group' },
+        { id: 'erd', label: '3. ERD & Data Dictionary', icon: 'fa-database' },
+        { id: 'flows', label: '4. Flows & UML Diagrams', icon: 'fa-diagram-project' },
+        { id: 'stories', label: '5. Agile Stories & Points', icon: 'fa-list-check' },
+        { id: 'roadmap', label: '6. Roadmap & Tech Debt', icon: 'fa-road' },
+        { id: 'export', label: '7. Spec Exporter (.md)', icon: 'fa-file-lines' }
+      ];
+
+      return (
+        <header className="app-header">
+          <div className="header-inner">
+            <div className="brand-wrapper">
+              <div className="brand-icon">
+                <i className="fa-solid fa-compass-drafting"></i>
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="brand-title">PlanCraft SDLC</span>
+                  <span className="brand-badge">React & Redux Studio</span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  Universal SDLC Architecture & Planning Workbench
+                </div>
+              </div>
+            </div>
+
+            <div className="header-actions">
+              <div className="project-selector">
+                <i className="fa-solid fa-folder-open" style={{ color: 'var(--accent-cyan)' }}></i>
+                <span>Blueprint:</span>
+                <select className="project-select-input" value={activeTemplateId} onChange={handleTemplateChange}>
+                  <option value="devconnector">DevConnector (MERN Social Network)</option>
+                  <option value="ecommerce">NexusMarket (E-Commerce Platform)</option>
+                  <option value="blank">Blank Custom Project (Plan Any App)</option>
+                </select>
+              </div>
+
+              <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+                <i className="fa-solid fa-file-arrow-up"></i>
+                <span>Import JSON</span>
+                <input type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportJSON} />
+              </label>
+
+              <button className="btn btn-outline btn-sm" onClick={handleExportJSON}>
+                <i className="fa-solid fa-download"></i>
+                <span>Backup JSON</span>
+              </button>
+            </div>
+          </div>
+
+          <nav className="nav-tabs-bar" style={{ marginTop: '0.75rem' }}>
+            <div className="nav-tabs-inner">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  className={`nav-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                  onClick={() => dispatch({ type: 'SET_TAB', payload: tab.id })}
+                >
+                  <i className={`fa-solid ${tab.icon}`}></i>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+        </header>
+      );
+    };
+
+    // --- COMPONENT: AI PROMPT STUDIO (HOMESCREEN) ---
+    const AiPromptStudioSection = () => {
+      const dispatch = useDispatch();
+      const currentProject = useSelector(state => state.project.currentProject);
+
+      const [prompt, setPrompt] = useState('');
+      const [mode, setMode] = useState('extend');
+      const [provider, setProvider] = useState('gemini');
+      const [model, setModel] = useState('gemini-3.8-flash');
+      const [apiKey, setApiKey] = useState('');
+      const [showKey, setShowKey] = useState(false);
+      const [showSettings, setShowSettings] = useState(false);
+      const [isGenerating, setIsGenerating] = useState(false);
+      const [currentStage, setCurrentStage] = useState('');
+      const [lastResult, setLastResult] = useState(null);
+
+      useEffect(() => {
+        const saved = localStorage.getItem('gemini_api_key');
+        if (saved) setApiKey(saved);
+      }, []);
+
+      const triggerAlert = (msg, alertType = 'info') => {
+        const id = 'alt_' + Date.now();
+        dispatch({ type: 'SET_ALERT', payload: { msg, alertType, id } });
+        setTimeout(() => dispatch({ type: 'REMOVE_ALERT', payload: id }), 4000);
+      };
+
+      const handleKeyChange = (val) => {
+        setApiKey(val);
+        if (provider === 'gemini') {
+          localStorage.setItem('gemini_api_key', val);
+        }
+      };
+
+      const getPresets = () => {
+        const pId = (currentProject?.id || '').toLowerCase();
+        if (pId.includes('dev') || pId.includes('connector')) {
+          return [
+            {
+              label: '💬 Real-Time Chat & Socket.io Channels',
+              prompt: 'Add real-time direct messaging with Socket.io, Redis adapter, read receipts, and encrypted media attachments.'
+            },
+            {
+              label: '💼 Tech Job Board & Recruiter ATS',
+              prompt: 'Add an engineering job board where recruiters post roles, candidate skill match scoring runs automatically, and developers submit 1-click applications.'
+            },
+            {
+              label: '🤖 AI Code Review & Portfolio Mentor',
+              prompt: 'Add an automated AI code review service that scans developer GitHub repositories and produces interview readiness scorecards.'
+            },
+            {
+              label: '💳 Pro Developer Subscription & Stripe Invoicing',
+              prompt: 'Integrate Stripe customer subscriptions for Pro developer features, featured profile placement, and monthly invoice generation.'
+            }
+          ];
+        }
+
+        if (pId.includes('nexus') || pId.includes('market') || pId.includes('ecom')) {
+          return [
+            {
+              label: '📦 Subscriptions & Auto-Ship Replenishment',
+              prompt: 'Add automated recurring replenishment orders, configurable delivery frequencies, and subscription discount policies.'
+            },
+            {
+              label: '🛍️ Multi-Vendor Marketplace & Escrow Payouts',
+              prompt: 'Add third-party merchant onboarding, commission calculation engine, and automated Stripe Connect escrow payouts.'
+            },
+            {
+              label: '🎯 AI Personalized Recommendation Engine',
+              prompt: 'Add collaborative filtering recommendation engine based on user browsing history and shopping cart co-occurrences.'
+            }
+          ];
+        }
+
+        return [
+          {
+            label: '🛸 Drone Grocery Delivery (SkyCart)',
+            prompt: 'Build an on-demand suburban grocery drone delivery service called SkyCart with battery telemetry and autonomous flight corridor allocation.'
+          },
+          {
+            label: '🅿️ IoT Smart Parking Reservation (ParkFlow)',
+            prompt: 'Build a real-time IoT smart parking reservation platform with ultrasonic sensor telemetry and license plate barrier recognition.'
+          },
+          {
+            label: '📷 Peer-to-Peer Camera Rental (LensShare)',
+            prompt: 'Build a peer-to-peer cinema and photography camera gear rental marketplace with escrow insurance deposits and barcode check-in.'
+          }
+        ];
+      };
+
+      const runGemini = async (promptText, context, currentMode, key, targetModel) => {
+        const modelsToTry = [targetModel, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+        const uniqueModels = [...new Set(modelsToTry)];
+        let lastErr = null;
+
+        for (const m of uniqueModels) {
+          try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(key.trim())}`;
+            const sys = currentMode === 'extend'
+              ? `You are a Principal Software Architect extending "${context.name}" (${context.description}). Stack: Frontend: ${context.targetStack?.frontend || 'React'}, Backend: ${context.targetStack?.backend || 'Node/Express'}, Database: ${context.targetStack?.database || 'MongoDB'}. The user wants to add: "${promptText}". Return ONLY valid JSON with keys: mode="extend", featureTitle, businessRules (array of {id, title, desc}), dataLayer (array of {collection, type, count, index}), functionalLayer (array of {method, path, access, desc}), erdEntities (array of {id, name, description, fields: [{name, type, key}]}), erdMermaidDelta (string of erDiagram relationships), stories (array of {id, epic, title, points, priority, status, statement}), roadmap (array of {id, horizon, title, impact, status, desc}). No markdown codefence.`
+              : `You are an Autonomous SDLC System Architect. Synthesize a complete PlanCraft JSON blueprint from idea: "${promptText}". Return ONLY valid JSON with keys: mode="incept", id, name, version, description, targetStack, architecture, erd, diagrams, stories, roadmap. No markdown codefence.`;
+
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ role: 'user', parts: [{ text: `${sys}\n\nTask:\n${promptText}` }] }],
+                generationConfig: { temperature: 0.25, responseMimeType: 'application/json' }
+              })
+            });
+
+            if (!res.ok) {
+              const errBody = await res.text();
+              throw new Error(`API Error (${res.status}): ${errBody}`);
+            }
+
+            const data = await res.json();
+            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!text) throw new Error('No content returned from Gemini.');
+            const parsed = JSON.parse(text.trim().replace(/^```json\n?|\n?```$/g, ''));
+            return { ...parsed, usedModel: m };
+          } catch (e) {
+            lastErr = e;
+            if (e.message && (e.message.includes('404') || e.message.toLowerCase().includes('not found'))) {
+              console.warn(`Model ${m} not found on endpoint, falling back...`);
+              continue;
+            }
+            throw e;
+          }
+        }
+        throw lastErr || new Error('All model endpoints failed.');
+      };
+
+      const runOfflineSynthesizer = (promptText, context, currentMode) => {
+        const p = promptText.toLowerCase();
+        const ts = Date.now();
+
+        if (currentMode === 'extend') {
+          if (p.includes('chat') || p.includes('message') || p.includes('socket') || p.includes('dm')) {
+            return {
+              mode: 'extend',
+              featureTitle: 'Real-Time Direct Messaging & Collaboration',
+              usedModel: 'Offline Heuristic Engine ($0 Cost)',
+              businessRules: [
+                { id: `b_chat_${ts}_1`, title: 'WebSocket Handshake & Identity Verification', desc: 'Enforce JWT bearer authentication during WebSocket handshake; associate connection socket ID with verified user ID in Redis cluster.' },
+                { id: `b_chat_${ts}_2`, title: 'Message Privacy & Retention Invariant', desc: 'Direct messages are strictly restricted to conversation participants. Soft delete sets tombstone flag for multi-device sync.' }
+              ],
+              dataLayer: [
+                { collection: 'conversations', type: 'Root Document', count: '1:N with users', index: '{ participants: 1 }, { updated_at: -1 }' },
+                { collection: 'messages', type: 'Sub-collection / Document', count: '1:N with conversations', index: '{ conversation_id: 1, created_at: -1 }' }
+              ],
+              functionalLayer: [
+                { method: 'GET', path: '/api/chat/conversations', access: 'Private', desc: 'Fetch active conversation threads with latest message preview and unread counters' },
+                { method: 'POST', path: '/api/chat/conversations', access: 'Private', desc: 'Initiate or retrieve 1-on-1 direct conversation with target developer' },
+                { method: 'GET', path: '/api/chat/messages/:conv_id', access: 'Private', desc: 'Cursor-based paginated message history for conversation thread' },
+                { method: 'POST', path: '/api/chat/messages', access: 'Private', desc: 'Dispatch direct message, persist payload, and emit Socket.io event' }
+              ],
+              erdEntities: [
+                {
+                  id: `ent_conv_${ts}`,
+                  name: 'CONVERSATION',
+                  description: 'Thread mapping active developer chat participants',
+                  fields: [
+                    { name: '_id', type: 'ObjectId', key: 'PK' },
+                    { name: 'participants', type: 'ObjectId[] (Users)', key: 'FK' },
+                    { name: 'last_message', type: 'String', key: '' },
+                    { name: 'updated_at', type: 'Date', key: '' }
+                  ]
+                },
+                {
+                  id: `ent_msg_${ts}`,
+                  name: 'MESSAGE',
+                  description: 'Direct message payload with delivery state',
+                  fields: [
+                    { name: '_id', type: 'ObjectId', key: 'PK' },
+                    { name: 'conversation_id', type: 'ObjectId', key: 'FK' },
+                    { name: 'sender_id', type: 'ObjectId (User)', key: 'FK' },
+                    { name: 'text', type: 'String', key: '' },
+                    { name: 'is_read', type: 'Boolean', key: '' },
+                    { name: 'created_at', type: 'Date', key: '' }
+                  ]
+                }
+              ],
+              erdMermaidDelta: `    CONVERSATION ||--o{ MESSAGE : contains\n    USER ||--o{ CONVERSATION : participates`,
+              stories: [
+                { id: `US-CHAT-01`, epic: 'REALTIME', title: 'Socket.io Handshake Gateway', points: 5, priority: 'Must', status: 'To Do', statement: 'As a logged-in developer, I want to authenticate over WebSocket so that I can exchange instant messages.' },
+                { id: `US-CHAT-02`, epic: 'REALTIME', title: '1-on-1 Direct Message Stream', points: 5, priority: 'Must', status: 'To Do', statement: 'As a developer, I want to open a chat modal with any profile owner so that we can coordinate project contributions.' },
+                { id: `US-CHAT-03`, epic: 'REALTIME', title: 'Message Read Receipts & Status Indicators', points: 3, priority: 'Should', status: 'To Do', statement: 'As a sender, I want to see checkmarks when my message has been delivered and viewed.' }
+              ],
+              roadmap: [
+                { id: `r_chat_${ts}`, horizon: 'Horizon 1 (0-3 Months)', title: 'Distributed Redis Pub/Sub Socket Adapter', impact: 'High', status: 'Planned', desc: 'Scale WebSocket connections horizontally across containerized node instances.' }
+              ]
+            };
+          }
+
+          if (p.includes('job') || p.includes('recruit') || p.includes('hiring') || p.includes('ats')) {
+            return {
+              mode: 'extend',
+              featureTitle: 'Developer Job Board & Recruiter ATS Matching',
+              usedModel: 'Offline Heuristic Engine ($0 Cost)',
+              businessRules: [
+                { id: `b_job_${ts}_1`, title: 'Recruiter Verified Organization Invariant', desc: 'Only users with validated recruiter credentials and company domains can publish job postings.' },
+                { id: `b_job_${ts}_2`, title: 'Skill Match Score Determinism', desc: 'Application match scoring strictly calculates intersection between developer normalized skills and required job keywords.' }
+              ],
+              dataLayer: [
+                { collection: 'jobs', type: 'Root Document', count: '1:N with recruiter', index: '{ skills_required: 1 }, { salary_range: 1 }' },
+                { collection: 'applications', type: 'Root Document', count: '1:N with jobs', index: '{ job_id: 1, applicant_id: 1 } (Unique)' }
+              ],
+              functionalLayer: [
+                { method: 'GET', path: '/api/jobs', access: 'Public', desc: 'List active developer openings with filter by seniority, location, and required tech stack' },
+                { method: 'POST', path: '/api/jobs', access: 'Private', desc: 'Post new engineering job specification (Recruiter role required)' },
+                { method: 'POST', path: '/api/jobs/:id/apply', access: 'Private', desc: 'Submit 1-click developer portfolio application with cover note' }
+              ],
+              erdEntities: [
+                {
+                  id: `ent_job_${ts}`,
+                  name: 'JOB_POSTING',
+                  description: 'Engineering role opening requirements',
+                  fields: [
+                    { name: '_id', type: 'ObjectId', key: 'PK' },
+                    { name: 'recruiter_id', type: 'ObjectId', key: 'FK' },
+                    { name: 'title', type: 'String', key: '' },
+                    { name: 'skills_required', type: 'String[]', key: '' },
+                    { name: 'is_remote', type: 'Boolean', key: '' }
+                  ]
+                },
+                {
+                  id: `ent_app_${ts}`,
+                  name: 'JOB_APPLICATION',
+                  description: 'Developer job application submission',
+                  fields: [
+                    { name: '_id', type: 'ObjectId', key: 'PK' },
+                    { name: 'job_id', type: 'ObjectId', key: 'FK' },
+                    { name: 'developer_id', type: 'ObjectId', key: 'FK' },
+                    { name: 'status', type: 'String (Pending/Review/Offer)', key: '' },
+                    { name: 'match_score', type: 'Number', key: '' }
+                  ]
+                }
+              ],
+              erdMermaidDelta: `    JOB_POSTING ||--o{ JOB_APPLICATION : receives\n    USER ||--o{ JOB_APPLICATION : submits`,
+              stories: [
+                { id: `US-JOB-01`, epic: 'CAREERS', title: 'Browse Filterable Job Feed', points: 5, priority: 'Must', status: 'To Do', statement: 'As a software engineer, I want to filter job openings by my skills so that I find relevant remote opportunities.' },
+                { id: `US-JOB-02`, epic: 'CAREERS', title: '1-Click Profile Application', points: 5, priority: 'Must', status: 'To Do', statement: 'As a developer, I want to submit my DevConnector profile directly to employers with one click.' }
+              ],
+              roadmap: [
+                { id: `r_job_${ts}`, horizon: 'Horizon 2 (3-6 Months)', title: 'Vector Embeddings for Semantic Skill Match', impact: 'High', status: 'Planned', desc: 'Replace keyword match with cosine similarity between resume and job description.' }
+              ]
+            };
+          }
+
+          // Generic Feature
+          const slug = promptText.slice(0, 24).replace(/[^a-zA-Z0-9 ]/g, '').trim();
+          const entityName = slug.toUpperCase().replace(/\s+/g, '_') || 'FEATURE_ITEM';
+          return {
+            mode: 'extend',
+            featureTitle: `${slug || 'Custom Extension'} Module`,
+            usedModel: 'Offline Heuristic Engine ($0 Cost)',
+            businessRules: [
+              { id: `b_gen_${ts}_1`, title: `${slug} Authorization Invariant`, desc: 'Ensure caller maintains ownership permission before executing modifications.' }
+            ],
+            dataLayer: [
+              { collection: entityName.toLowerCase(), type: 'Root Collection', count: '1:N with users', index: '{ user_id: 1, created_at: -1 }' }
+            ],
+            functionalLayer: [
+              { method: 'GET', path: `/api/${entityName.toLowerCase()}`, access: 'Private', desc: `Retrieve ${slug} records for current user session` },
+              { method: 'POST', path: `/api/${entityName.toLowerCase()}`, access: 'Private', desc: `Create and persist new ${slug} entry` }
+            ],
+            erdEntities: [
+              {
+                id: `ent_gen_${ts}`,
+                name: entityName,
+                description: `Stores state for ${slug}`,
+                fields: [
+                  { name: '_id', type: 'ObjectId', key: 'PK' },
+                  { name: 'user_id', type: 'ObjectId', key: 'FK' },
+                  { name: 'title', type: 'String', key: '' },
+                  { name: 'status', type: 'String', key: '' },
+                  { name: 'created_at', type: 'Date', key: '' }
+                ]
+              }
+            ],
+            erdMermaidDelta: `    USER ||--o{ ${entityName} : owns`,
+            stories: [
+              { id: `US-MOD-01`, epic: 'CORE', title: `Manage ${slug}`, points: 5, priority: 'Must', status: 'To Do', statement: `As a user, I want to manage ${slug} so that my workflow is streamlined.` }
+            ],
+            roadmap: [
+              { id: `r_gen_${ts}`, horizon: 'Horizon 1 (0-3 Months)', title: `Optimize ${slug} Indexing`, impact: 'Medium', status: 'Planned', desc: `Apply compound indexing to support high concurrency reads.` }
+            ]
+          };
+        }
+
+        // incept mode
+        const projSlug = promptText.slice(0, 20).toLowerCase().replace(/[^a-z0-9]/g, '') || 'newapp';
+        const projName = promptText.slice(0, 32).trim() || 'New Application';
+        return {
+          mode: 'incept',
+          usedModel: 'Offline Heuristic Engine ($0 Cost)',
+          id: projSlug,
+          name: `${projName} Platform`,
+          version: '1.0.0',
+          description: promptText,
+          targetStack: {
+            frontend: 'React 18, Redux Toolkit, CSS Design System',
+            backend: 'Node.js, Express, JWT, Express-Validator',
+            database: 'MongoDB Atlas / PostgreSQL',
+            external: 'Stripe, AWS S3, SendGrid'
+          },
+          architecture: {
+            businessLayer: [
+              { id: 'b1', title: 'Stateless Authentication', desc: 'Secure JWT token authentication with bcrypt password hashing.' },
+              { id: 'b2', title: 'Data Isolation Invariant', desc: 'Mutations strictly enforce authorization ownership check.' }
+            ],
+            dataLayer: [
+              { collection: 'users', type: 'Root Document', count: '1:N', index: '{ email: 1 } (Unique)' },
+              { collection: 'resources', type: 'Root Document', count: '1:N with users', index: '{ user: 1 }, { created_at: -1 }' }
+            ],
+            functionalLayer: [
+              { method: 'POST', path: '/api/v1/auth/register', access: 'Public', desc: 'Register credentials and issue JWT' },
+              { method: 'POST', path: '/api/v1/auth/login', access: 'Public', desc: 'Authenticate and receive session token' },
+              { method: 'GET', path: '/api/v1/resources', access: 'Private', desc: 'Fetch paginated catalog of resources' },
+              { method: 'POST', path: '/api/v1/resources', access: 'Private', desc: 'Create and persist resource record' }
+            ]
+          },
+          erd: {
+            entities: [
+              {
+                id: 'ent_1',
+                name: 'USER',
+                description: 'Account credentials and profile identity',
+                fields: [
+                  { name: '_id', type: 'ObjectId', key: 'PK' },
+                  { name: 'name', type: 'String', key: '' },
+                  { name: 'email', type: 'String', key: 'UK' },
+                  { name: 'password', type: 'String (Bcrypt)', key: '' }
+                ]
+              },
+              {
+                id: 'ent_2',
+                name: 'RESOURCE',
+                description: 'Primary domain resource items',
+                fields: [
+                  { name: '_id', type: 'ObjectId', key: 'PK' },
+                  { name: 'user_id', type: 'ObjectId', key: 'FK' },
+                  { name: 'title', type: 'String', key: '' },
+                  { name: 'created_at', type: 'Date', key: '' }
+                ]
+              }
+            ],
+            mermaidSyntax: `erDiagram\n    USER ||--o{ RESOURCE : owns\n    USER {\n        ObjectId _id PK\n        String email UK\n    }\n    RESOURCE {\n        ObjectId _id PK\n        ObjectId user_id FK\n        String title\n    }`
+          },
+          diagrams: {
+            dfdLevel0: `graph TD\n    Client[Client Web App] -->|HTTPS REST| Gateway[API Server]\n    Gateway -->|Queries| DB[(Persistent Database)]`,
+            classDiagram: `classDiagram\n    class User {\n        +ObjectId id\n        +String email\n        +register()\n    }\n    class Resource {\n        +ObjectId id\n        +String title\n    }\n    User "1" --> "*" Resource`,
+            sequenceAuth: `sequenceDiagram\n    autonumber\n    Client->>Server: POST /api/v1/auth/login\n    Server->>DB: Query User by Email\n    DB-->>Server: Return Hash\n    Server-->>Client: 200 OK + JWT Token`
+          },
+          stories: [
+            { id: 'US-01', epic: 'AUTH', title: 'User Registration & JWT Login', points: 5, priority: 'Must', status: 'To Do', statement: 'As a user, I want to register and sign in so that I can access my workspace.' },
+            { id: 'US-02', epic: 'CORE', title: 'Explore & Filter Catalog', points: 5, priority: 'Must', status: 'To Do', statement: 'As a user, I want to list and filter items so that I find what I need quickly.' },
+            { id: 'US-03', epic: 'CORE', title: 'Create & Manage Records', points: 5, priority: 'Must', status: 'To Do', statement: 'As a user, I want to create, edit, and delete my records.' }
+          ],
+          roadmap: [
+            { id: 'r1', horizon: 'Horizon 1 (0-3 Months)', title: 'Rate Limiting & Redis Session Cache', impact: 'High', status: 'Planned', desc: 'Prevent API abuse and accelerate session checks.' },
+            { id: 'r2', horizon: 'Horizon 2 (3-6 Months)', title: 'Full-Text Search Indexing', impact: 'High', status: 'Planned', desc: 'Deploy Elasticsearch or Atlas Search for real-time text matching.' }
+          ]
+        };
+      };
+
+      const handleSynthesize = async () => {
+        if (!prompt.trim()) {
+          triggerAlert('Please enter a feature description or idea prompt.', 'danger');
+          return;
+        }
+
+        setIsGenerating(true);
+        setLastResult(null);
+
+        const stages = [
+          'Stage 1: Semantic Discovery & Ontology Mapping...',
+          'Stage 2: Layered Architecture & REST Contract Formulation...',
+          'Stage 3: Data Dictionary & Crow’s Foot Relational Schema...',
+          'Stage 4: Agile User Stories & Fibonacci Point Sizing...'
+        ];
+
+        let stageIdx = 0;
+        setCurrentStage(stages[0]);
+        const interval = setInterval(() => {
+          stageIdx = (stageIdx + 1) % stages.length;
+          setCurrentStage(stages[stageIdx]);
+        }, 450);
+
+        try {
+          let res;
+          if (provider === 'offline' || !apiKey.trim()) {
+            await new Promise(r => setTimeout(r, 600));
+            res = runOfflineSynthesizer(prompt, currentProject, mode);
+          } else {
+            res = await runGemini(prompt, currentProject, mode, apiKey, model);
+          }
+
+          clearInterval(interval);
+          setLastResult(res);
+          triggerAlert(`Synthesized successfully with ${res.usedModel || provider}! Review changes below.`, 'success');
+        } catch (err) {
+          clearInterval(interval);
+          console.error(err);
+          triggerAlert(`Generation Error: ${err.message}`, 'danger');
+        } finally {
+          setIsGenerating(false);
+          setCurrentStage('');
+        }
+      };
+
+      const handleApply = () => {
+        if (!lastResult) return;
+        if (lastResult.mode === 'incept' || mode === 'incept') {
+          dispatch({ type: 'IMPORT_JSON', payload: lastResult });
+          triggerAlert(`Loaded newly incepted project "${lastResult.name}"!`, 'success');
+        } else {
+          dispatch({ type: 'EXTEND_PROJECT', payload: lastResult });
+          triggerAlert(`Successfully expanded ${currentProject.name} with "${lastResult.featureTitle || 'New Feature'}"!`, 'success');
+        }
+        setLastResult(null);
+        setPrompt('');
+      };
+
+      return (
+        <div className="card prompt-studio-card" style={{ marginBottom: '2rem' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #c084fc, #38bdf8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', color: '#fff', boxShadow: '0 0 20px rgba(192, 132, 252, 0.35)' }}>
+                <i className="fa-solid fa-wand-magic-sparkles"></i>
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '700', margin: 0 }}>
+                    AI Inception & Evolution Studio
+                  </h3>
+                  <span className="badge badge-purple" style={{ textTransform: 'uppercase' }}>
+                    {mode === 'extend' ? `Enhance: ${currentProject.name}` : 'New System Inception'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Prompt-driven architecture synthesis powered by Google Gemini & Autonomous SDLC Engine
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span className={`badge ${provider === 'offline' ? 'badge-emerald' : 'badge-cyan'}`} style={{ fontSize: '0.75rem' }}>
+                <i className={`fa-solid ${provider === 'offline' ? 'fa-bolt' : 'fa-brain'}`} style={{ marginRight: '5px' }}></i>
+                {provider === 'offline' ? 'Offline Engine ($0 Cost)' : `${provider.toUpperCase()} (${model})`}
+              </span>
+
+              <button className={`btn btn-sm ${showSettings ? 'btn-secondary' : 'btn-outline'}`} onClick={() => setShowSettings(!showSettings)} title="Configure AI Engine & API Keys">
+                <i className="fa-solid fa-gear"></i>
+                <span>Engine Settings</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Engine Settings Drawer */}
+          {showSettings && (
+            <div style={{ background: 'rgba(15, 23, 42, 0.85)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem', marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--accent-cyan)' }}>
+                  <i className="fa-solid fa-key" style={{ marginRight: '6px' }}></i>
+                  AI Provider & Intelligence Configuration
+                </div>
+                <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', color: 'var(--accent-indigo)' }}>
+                  Get Free Gemini Key (Google AI Studio) <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <label className="form-label">Provider Service</label>
+                  <select className="form-select" value={provider} onChange={(e) => setProvider(e.target.value)}>
+                    <option value="gemini">Google Gemini API (Direct Key)</option>
+                    <option value="offline">Offline Intelligent Synthesizer ($0 Cost, No Key)</option>
+                  </select>
+                </div>
+
+                {provider === 'gemini' && (
+                  <div>
+                    <label className="form-label">Gemini Model</label>
+                    <select className="form-select" value={model} onChange={(e) => setModel(e.target.value)}>
+                      <option value="gemini-3.8-flash">Gemini 3.8 Flash (Cutting-Edge High Performance)</option>
+                      <option value="gemini-2.0-flash">Gemini 2.0 Flash (Next-Gen High-Speed)</option>
+                      <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast Free Tier)</option>
+                      <option value="gemini-1.5-pro">Gemini 1.5 Pro (Deep Architecture Reasoning)</option>
+                    </select>
+                  </div>
+                )}
+
+                {provider !== 'offline' && (
+                  <div>
+                    <label className="form-label">Gemini API Key</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input
+                        type={showKey ? 'text' : 'password'}
+                        className="form-input"
+                        placeholder="AIzaSy..."
+                        value={apiKey}
+                        onChange={(e) => handleKeyChange(e.target.value)}
+                      />
+                      <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowKey(!showKey)}>
+                        <i className={`fa-solid ${showKey ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '4px' }}>
+                      Stored securely in your local browser memory only.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Presets */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: '600', textTransform: 'uppercase' }}>
+                Quick Prompts for {currentProject.name}:
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              {getPresets().map((preset, idx) => (
+                <button
+                  key={idx}
+                  className="filter-btn"
+                  style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
+                  onClick={() => {
+                    setPrompt(preset.prompt);
+                    setMode('extend');
+                  }}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Prompt Input */}
+          <div style={{ marginBottom: '1rem' }}>
+            <textarea
+              className="form-textarea"
+              style={{
+                minHeight: '100px',
+                fontSize: '0.95rem',
+                background: 'rgba(10, 15, 29, 0.8)',
+                borderColor: 'rgba(192, 132, 252, 0.3)'
+              }}
+              placeholder={
+                mode === 'extend'
+                  ? `Describe the feature, module, or capability you want to build into ${currentProject.name} (e.g. Add real-time private messaging with Socket.io, read receipts, and file attachments)...`
+                  : 'Describe your software idea from scratch (e.g. Build an autonomous suburban drone grocery delivery dispatch platform called SkyCart)...'
+              }
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+            />
+          </div>
+
+          {/* Action Bar */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(15, 23, 42, 0.8)', padding: '3px', borderRadius: '8px' }}>
+              <button
+                type="button"
+                className={`btn btn-sm ${mode === 'extend' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ border: 'none' }}
+                onClick={() => setMode('extend')}
+              >
+                <i className="fa-solid fa-puzzle-piece"></i>
+                <span>Further Develop {currentProject.name}</span>
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${mode === 'incept' ? 'btn-primary' : 'btn-outline'}`}
+                style={{ border: 'none' }}
+                onClick={() => setMode('incept')}
+              >
+                <i className="fa-solid fa-sparkles"></i>
+                <span>Incept New Project</span>
+              </button>
+            </div>
+
+            <button
+              className="btn btn-primary"
+              onClick={handleSynthesize}
+              disabled={isGenerating}
+              style={{
+                background: 'linear-gradient(135deg, #818cf8, #c084fc)',
+                boxShadow: '0 0 15px rgba(192, 132, 252, 0.35)',
+                border: 'none'
+              }}
+            >
+              {isGenerating ? (
+                <>
+                  <i className="fa-solid fa-circle-notch fa-spin"></i>
+                  <span>{currentStage || 'Synthesizing...'}</span>
+                </>
+              ) : (
+                <>
+                  <i className="fa-solid fa-bolt"></i>
+                  <span>{mode === 'extend' ? `Develop Feature for ${currentProject.name}` : 'Synthesize Complete System'}</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Result Preview */}
+          {lastResult && (
+            <div style={{ marginTop: '1.5rem', padding: '1.25rem', borderRadius: 'var(--radius-md)', background: 'rgba(30, 41, 59, 0.8)', border: '1px solid rgba(52, 211, 153, 0.4)', boxShadow: '0 0 20px rgba(52, 211, 153, 0.1)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem', borderBottom: '1px solid rgba(148, 163, 184, 0.15)', paddingBottom: '0.75rem' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="fa-solid fa-circle-check" style={{ color: 'var(--accent-emerald)', fontSize: '1.2rem' }}></i>
+                    <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '700' }}>
+                      {lastResult.featureTitle || lastResult.name || 'Synthesis Complete'}
+                    </h4>
+                    <span className="badge badge-emerald">Ready to Apply</span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                    Generated using {lastResult.usedModel || provider}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setLastResult(null)}>
+                    <i className="fa-solid fa-xmark"></i> Dismiss
+                  </button>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={handleApply}
+                    style={{ background: 'var(--accent-emerald)', color: '#090d16', fontWeight: '700' }}
+                  >
+                    <i className="fa-solid fa-plus"></i> Apply to {currentProject.name}
+                  </button>
+                </div>
+              </div>
+
+              {/* Metric Badges */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.75rem', borderRadius: '6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: '800', color: 'var(--accent-indigo)' }}>
+                    +{lastResult.stories?.length || 0}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Agile Stories</div>
+                </div>
+
+                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.75rem', borderRadius: '6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: '800', color: 'var(--accent-cyan)' }}>
+                    +{lastResult.functionalLayer?.length || 0}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>REST Endpoints</div>
+                </div>
+
+                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.75rem', borderRadius: '6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: '800', color: 'var(--accent-emerald)' }}>
+                    +{lastResult.erdEntities?.length || (lastResult.erd?.entities?.length) || 0}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Data Entities</div>
+                </div>
+
+                <div style={{ background: 'rgba(15, 23, 42, 0.6)', padding: '0.75rem', borderRadius: '6px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: '800', color: 'var(--accent-purple)' }}>
+                    +{lastResult.businessRules?.length || 0}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Business Policies</div>
+                </div>
+              </div>
+
+              {lastResult.stories && lastResult.stories.length > 0 && (
+                <div style={{ fontSize: '0.85rem' }}>
+                  <div style={{ fontWeight: '600', color: 'var(--text-main)', marginBottom: '0.4rem' }}>
+                    Synthesized Stories Preview:
+                  </div>
+                  <ul style={{ paddingLeft: '1.25rem', color: 'var(--text-muted)' }}>
+                    {lastResult.stories.slice(0, 3).map((s, idx) => (
+                      <li key={idx}>
+                        <strong style={{ color: 'var(--text-main)' }}>{s.title}</strong> ({s.points} pts) &mdash; <em>{s.statement}</em>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // --- COMPONENT: TAB 1 OVERVIEW ---
+    const TabOverview = () => {
+      const dispatch = useDispatch();
+      const project = useSelector(state => state.project.currentProject);
+      const [isEditing, setIsEditing] = useState(false);
+      const [form, setForm] = useState({
+        name: project.name,
+        version: project.version,
+        description: project.description,
+        frontend: project.targetStack?.frontend || '',
+        backend: project.targetStack?.backend || '',
+        database: project.targetStack?.database || '',
+        external: project.targetStack?.external || ''
+      });
+
+      const totalPoints = (project.stories || []).reduce((acc, s) => acc + (parseInt(s.points) || 0), 0);
+
+      const handleSave = (e) => {
+        e.preventDefault();
+        dispatch({
+          type: 'UPDATE_METADATA',
+          payload: {
+            name: form.name,
+            version: form.version,
+            description: form.description,
+            targetStack: {
+              frontend: form.frontend,
+              backend: form.backend,
+              database: form.database,
+              external: form.external
+            }
+          }
+        });
+        setIsEditing(false);
+      };
+
+      return (
+        <div className="tab-content">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title">
+                <i className="fa-solid fa-compass-drafting" style={{ color: 'var(--accent-cyan)' }}></i>
+                {project.name}
+              </h2>
+              <p className="section-desc">{project.description}</p>
+            </div>
+            <button className={`btn ${isEditing ? 'btn-secondary' : 'btn-outline'}`} onClick={() => setIsEditing(!isEditing)}>
+              <i className={`fa-solid ${isEditing ? 'fa-xmark' : 'fa-pen-to-square'}`}></i>
+              <span>{isEditing ? 'Cancel Edit' : 'Edit Project Metadata'}</span>
+            </button>
+          </div>
+
+          <div className="grid-4" style={{ marginBottom: '2rem' }}>
+            <div className="card" style={{ borderLeft: '4px solid var(--accent-indigo)' }}>
+              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Total Story Points</div>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-indigo)', margin: '0.25rem 0' }}>
+                {totalPoints} <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>pts</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Across {(project.stories || []).length} user stories</div>
+            </div>
+
+            <div className="card" style={{ borderLeft: '4px solid var(--accent-cyan)' }}>
+              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Data Entities</div>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-cyan)', margin: '0.25rem 0' }}>
+                {project.erd?.entities?.length || 0} <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>Models</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Defined in ERD dictionary</div>
+            </div>
+
+            <div className="card" style={{ borderLeft: '4px solid var(--accent-emerald)' }}>
+              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>REST Endpoints</div>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-emerald)', margin: '0.25rem 0' }}>
+                {project.architecture?.functionalLayer?.length || 0} <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>APIs</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Functional service contracts</div>
+            </div>
+
+            <div className="card" style={{ borderLeft: '4px solid var(--accent-purple)' }}>
+              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Roadmap Horizons</div>
+              <div style={{ fontSize: '2rem', fontWeight: '800', color: 'var(--accent-purple)', margin: '0.25rem 0' }}>
+                {project.roadmap?.length || 0} <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>Initiatives</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Post-MVP scaling roadmap</div>
+            </div>
+          </div>
+
+          {/* AI Prompt Studio for Feature Inception & Evolution */}
+          <AiPromptStudioSection />
+
+          {isEditing && (
+            <form onSubmit={handleSave} className="card" style={{ marginBottom: '2rem' }}>
+              <div className="card-header">
+                <h3 className="card-title"><i className="fa-solid fa-sliders"></i> Edit Information & Stack</h3>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">System Name</label>
+                  <input className="form-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">SDLC Version</label>
+                  <input className="form-input" value={form.version} onChange={e => setForm({ ...form, version: e.target.value })} required />
+                </div>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label className="form-label">System Description</label>
+                  <textarea className="form-textarea" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Frontend Stack</label>
+                  <input className="form-input" value={form.frontend} onChange={e => setForm({ ...form, frontend: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Backend Stack</label>
+                  <input className="form-input" value={form.backend} onChange={e => setForm({ ...form, backend: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Database Tier</label>
+                  <input className="form-input" value={form.database} onChange={e => setForm({ ...form, database: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">External / Cloud</label>
+                  <input className="form-input" value={form.external} onChange={e => setForm({ ...form, external: e.target.value })} />
+                </div>
+              </div>
+              <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary">Save Changes</button>
+              </div>
+            </form>
+          )}
+
+          <div className="grid-2">
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title"><i className="fa-solid fa-laptop-code" style={{ color: 'var(--accent-cyan)' }}></i> Frontend Presentation Tier</h3>
+                <span className="badge badge-cyan">Client SPA</span>
+              </div>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{project.targetStack?.frontend}</p>
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title"><i className="fa-solid fa-server" style={{ color: 'var(--accent-indigo)' }}></i> Backend Application Tier</h3>
+                <span className="badge badge-purple">Services</span>
+              </div>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{project.targetStack?.backend}</p>
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title"><i className="fa-solid fa-database" style={{ color: 'var(--accent-emerald)' }}></i> Persistent Data Tier</h3>
+                <span className="badge badge-emerald">Storage</span>
+              </div>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{project.targetStack?.database}</p>
+            </div>
+
+            <div className="card">
+              <div className="card-header">
+                <h3 className="card-title"><i className="fa-solid fa-cloud" style={{ color: 'var(--accent-amber)' }}></i> External Cloud Services</h3>
+                <span className="badge badge-amber">Integrations</span>
+              </div>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{project.targetStack?.external}</p>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // --- COMPONENT: TAB 2 ARCHITECTURE ---
+    const TabArchitecture = () => {
+      const dispatch = useDispatch();
+      const arch = useSelector(state => state.project.currentProject.architecture || {});
+      const [layer, setLayer] = useState('business');
+      const [showRuleModal, setShowRuleModal] = useState(false);
+      const [newRule, setNewRule] = useState({ title: '', desc: '' });
+      const [showApiModal, setShowApiModal] = useState(false);
+      const [newApi, setNewApi] = useState({ method: 'GET', path: '', access: 'Public', desc: '' });
+
+      const handleAddRule = (e) => {
+        e.preventDefault();
+        dispatch({ type: 'ADD_BUSINESS_RULE', payload: { id: 'b_' + Date.now(), ...newRule } });
+        setNewRule({ title: '', desc: '' });
+        setShowRuleModal(false);
+      };
+
+      const handleAddApi = (e) => {
+        e.preventDefault();
+        dispatch({ type: 'ADD_ENDPOINT', payload: { ...newApi } });
+        setNewApi({ method: 'GET', path: '', access: 'Public', desc: '' });
+        setShowApiModal(false);
+      };
+
+      return (
+        <div className="tab-content">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title"><i className="fa-solid fa-layer-group" style={{ color: 'var(--accent-indigo)' }}></i> Layered Architecture Design</h2>
+              <p className="section-desc">Business domain logic, Data tier specifications, and Functional API contracts.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className={`filter-btn ${layer === 'business' ? 'active' : ''}`} onClick={() => setLayer('business')}>
+                1. Business Layer ({arch.businessLayer?.length || 0})
+              </button>
+              <button className={`filter-btn ${layer === 'data' ? 'active' : ''}`} onClick={() => setLayer('data')}>
+                2. Data Layer ({arch.dataLayer?.length || 0})
+              </button>
+              <button className={`filter-btn ${layer === 'functional' ? 'active' : ''}`} onClick={() => setLayer('functional')}>
+                3. Functional Layer ({arch.functionalLayer?.length || 0})
+              </button>
+            </div>
+          </div>
+
+          {layer === 'business' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Business Layer Invariants & Domain Rules</h3>
+                <button className="btn btn-primary btn-sm" onClick={() => setShowRuleModal(true)}>
+                  <i className="fa-solid fa-plus"></i> Add Domain Rule
+                </button>
+              </div>
+              <div className="grid-2">
+                {(arch.businessLayer || []).map(b => (
+                  <div key={b.id} className="card">
+                    <div className="card-header">
+                      <h4 className="card-title" style={{ fontSize: '0.95rem' }}><i className="fa-solid fa-shield-halved" style={{ color: 'var(--accent-cyan)' }}></i> {b.title}</h4>
+                      <button className="btn btn-danger btn-sm" style={{ padding: '0.2rem 0.4rem' }} onClick={() => dispatch({ type: 'DELETE_BUSINESS_RULE', payload: b.id })}>
+                        <i className="fa-solid fa-trash-can"></i>
+                      </button>
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{b.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {layer === 'data' && (
+            <div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: '700', marginBottom: '1rem' }}>Data Layer Schema & Collections Strategy</h3>
+              <div className="card" style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                      <th style={{ padding: '0.75rem 1rem' }}>Entity / Table</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Storage Pattern</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Multiplicity</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Indexing Strategy</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(arch.dataLayer || []).map((d, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid rgba(148,163,184,0.08)' }}>
+                        <td style={{ padding: '0.75rem 1rem', fontFamily: 'var(--font-code)', color: 'var(--accent-cyan)', fontWeight: '600' }}>{d.collection}</td>
+                        <td style={{ padding: '0.75rem 1rem' }}>{d.type}</td>
+                        <td style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)' }}>{d.count}</td>
+                        <td style={{ padding: '0.75rem 1rem', fontFamily: 'var(--font-code)', color: 'var(--accent-indigo)' }}>{d.index}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {layer === 'functional' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: '700' }}>Functional Layer REST API Endpoints</h3>
+                <button className="btn btn-primary btn-sm" onClick={() => setShowApiModal(true)}>
+                  <i className="fa-solid fa-plus"></i> Add Endpoint
+                </button>
+              </div>
+              <div className="card" style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
+                      <th style={{ padding: '0.75rem 1rem' }}>Method</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Path</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Access Guard</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Description</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(arch.functionalLayer || []).map((f, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid rgba(148,163,184,0.08)' }}>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <span className={`badge ${f.method === 'GET' ? 'badge-cyan' : f.method === 'POST' ? 'badge-emerald' : f.method === 'PUT' ? 'badge-amber' : 'badge-rose'}`}>
+                            {f.method}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', fontFamily: 'var(--font-code)', fontWeight: '600' }}>{f.path}</td>
+                        <td style={{ padding: '0.75rem 1rem' }}>
+                          <span className={`badge ${f.access === 'Private' ? 'badge-amber' : 'badge-emerald'}`}>{f.access}</span>
+                        </td>
+                        <td style={{ padding: '0.75rem 1rem', color: 'var(--text-muted)' }}>{f.desc}</td>
+                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
+                          <button className="btn btn-danger btn-sm" style={{ padding: '0.2rem 0.4rem' }} onClick={() => dispatch({ type: 'DELETE_ENDPOINT', payload: i })}>
+                            <i className="fa-solid fa-trash-can"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {showRuleModal && (
+            <div className="modal-backdrop" onClick={() => setShowRuleModal(false)}>
+              <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3 className="modal-title">Add Business Domain Rule</h3>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowRuleModal(false)}><i className="fa-solid fa-xmark"></i></button>
+                </div>
+                <form onSubmit={handleAddRule}>
+                  <div className="modal-body">
+                    <div className="form-group">
+                      <label className="form-label">Rule Title</label>
+                      <input className="form-input" value={newRule.title} onChange={e => setNewRule({ ...newRule, title: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Rule Invariant / Description</label>
+                      <textarea className="form-textarea" value={newRule.desc} onChange={e => setNewRule({ ...newRule, desc: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-secondary" onClick={() => setShowRuleModal(false)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary">Save Rule</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {showApiModal && (
+            <div className="modal-backdrop" onClick={() => setShowApiModal(false)}>
+              <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3 className="modal-title">Register API Endpoint Contract</h3>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowApiModal(false)}><i className="fa-solid fa-xmark"></i></button>
+                </div>
+                <form onSubmit={handleAddApi}>
+                  <div className="modal-body">
+                    <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '1rem' }}>
+                      <div className="form-group">
+                        <label className="form-label">Method</label>
+                        <select className="form-select" value={newApi.method} onChange={e => setNewApi({ ...newApi, method: e.target.value })}>
+                          <option value="GET">GET</option>
+                          <option value="POST">POST</option>
+                          <option value="PUT">PUT</option>
+                          <option value="DELETE">DELETE</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Path</label>
+                        <input className="form-input" value={newApi.path} onChange={e => setNewApi({ ...newApi, path: e.target.value })} placeholder="/api/..." required />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Access Guard</label>
+                      <select className="form-select" value={newApi.access} onChange={e => setNewApi({ ...newApi, access: e.target.value })}>
+                        <option value="Public">Public</option>
+                        <option value="Private">Private</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Description</label>
+                      <textarea className="form-textarea" value={newApi.desc} onChange={e => setNewApi({ ...newApi, desc: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-secondary" onClick={() => setShowApiModal(false)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary">Save Endpoint</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // --- COMPONENT: TAB 3 ERD STUDIO ---
+    const TabErd = () => {
+      const dispatch = useDispatch();
+      const erd = useSelector(state => state.project.currentProject.erd || {});
+      const [isEditing, setIsEditing] = useState(false);
+      const [syntax, setSyntax] = useState(erd.mermaidSyntax || '');
+      const [showModal, setShowModal] = useState(false);
+      const [newEnt, setNewEnt] = useState({ name: '', description: '', fields: [{ name: '_id', type: 'ObjectId', key: 'PK' }] });
+
+      const handleAddEntity = (e) => {
+        e.preventDefault();
+        dispatch({
+          type: 'ADD_ENTITY',
+          payload: {
+            id: 'ent_' + Date.now(),
+            name: newEnt.name.toUpperCase(),
+            description: newEnt.description,
+            fields: newEnt.fields
+          }
+        });
+        setNewEnt({ name: '', description: '', fields: [{ name: '_id', type: 'ObjectId', key: 'PK' }] });
+        setShowModal(false);
+      };
+
+      const handleSaveSyntax = () => {
+        dispatch({ type: 'UPDATE_ERD_SYNTAX', payload: syntax });
+        setIsEditing(false);
+      };
+
+      return (
+        <div className="tab-content">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title"><i className="fa-solid fa-database" style={{ color: 'var(--accent-cyan)' }}></i> Entity Relationship Diagram & Data Dictionary</h2>
+              <p className="section-desc">Conceptual and physical schema models rendered dynamically with Crow's Foot ERD notation.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className={`btn ${isEditing ? 'btn-primary' : 'btn-outline'} btn-sm`} onClick={() => { if (isEditing) handleSaveSyntax(); else { setSyntax(erd.mermaidSyntax || ''); setIsEditing(true); } }}>
+                <i className={`fa-solid ${isEditing ? 'fa-check' : 'fa-code'}`}></i> {isEditing ? 'Apply Code' : 'Edit Mermaid ERD'}
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
+                <i className="fa-solid fa-plus"></i> Add Entity
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 1fr) 1.5fr', gap: '1.5rem' }}>
+            <div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1rem' }}>Data Dictionary ({erd.entities?.length || 0} Entities)</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {(erd.entities || []).map(ent => (
+                  <div key={ent.id} className="entity-card">
+                    <div className="entity-card-header">
+                      <div>
+                        <span className="entity-name">{ent.name}</span>
+                        {ent.description && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ent.description}</p>}
+                      </div>
+                      <button className="btn btn-danger btn-sm" style={{ padding: '0.2rem 0.4rem' }} onClick={() => dispatch({ type: 'DELETE_ENTITY', payload: ent.id })}>
+                        <i className="fa-solid fa-trash-can"></i>
+                      </button>
+                    </div>
+                    <div className="entity-field-list">
+                      {(ent.fields || []).map((f, i) => (
+                        <div key={i} className="entity-field-row">
+                          <div className="field-name-group">
+                            {f.key && <span className={`field-key-badge ${f.key === 'PK' ? 'field-key-pk' : 'field-key-fk'}`}>{f.key}</span>}
+                            <span>{f.name}</span>
+                          </div>
+                          <span className="field-type">{f.type}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="diagram-viewer-card">
+                <div className="diagram-toolbar">
+                  <span style={{ fontWeight: '700' }}>Live Mermaid ERD Canvas</span>
+                  <span className="badge badge-cyan">Crow's Foot</span>
+                </div>
+                {isEditing ? (
+                  <div style={{ padding: '1rem' }}>
+                    <textarea className="diagram-code-editor" style={{ minHeight: '350px' }} value={syntax} onChange={e => setSyntax(e.target.value)} />
+                    <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setIsEditing(false)}>Cancel</button>
+                      <button className="btn btn-primary btn-sm" onClick={handleSaveSyntax}>Save & Render</button>
+                    </div>
+                  </div>
+                ) : (
+                  <MermaidViewer chartCode={erd.mermaidSyntax || 'erDiagram'} id="erd" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {showModal && (
+            <div className="modal-backdrop" onClick={() => setShowModal(false)}>
+              <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3 className="modal-title">Add Domain Entity</h3>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowModal(false)}><i className="fa-solid fa-xmark"></i></button>
+                </div>
+                <form onSubmit={handleAddEntity}>
+                  <div className="modal-body">
+                    <div className="form-group">
+                      <label className="form-label">Entity Name</label>
+                      <input className="form-input" value={newEnt.name} onChange={e => setNewEnt({ ...newEnt, name: e.target.value })} placeholder="e.g. INVOICE" required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Description</label>
+                      <input className="form-input" value={newEnt.description} onChange={e => setNewEnt({ ...newEnt, description: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary">Save Entity</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // --- COMPONENT: TAB 4 FLOWS & UML ---
+    const TabFlows = () => {
+      const dispatch = useDispatch();
+      const diagrams = useSelector(state => state.project.currentProject.diagrams || {});
+      const [type, setType] = useState('dfdLevel0');
+      const [isEditing, setIsEditing] = useState(false);
+      const [draft, setDraft] = useState('');
+
+      const types = [
+        { key: 'dfdLevel0', label: 'DFD Level 0 (Context)', icon: 'fa-arrows-split-up-and-left' },
+        { key: 'dfdLevel1', label: 'DFD Level 1 (Decomposition)', icon: 'fa-network-wired' },
+        { key: 'classDiagram', label: 'UML Class Diagram', icon: 'fa-cube' },
+        { key: 'sequenceAuth', label: 'Event Sequence Flow', icon: 'fa-timeline' }
+      ];
+
+      const currentCode = diagrams[type] || '';
+
+      const handleSave = () => {
+        dispatch({ type: 'UPDATE_DIAGRAM', payload: { key: type, syntax: draft } });
+        setIsEditing(false);
+      };
+
+      return (
+        <div className="tab-content">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title"><i className="fa-solid fa-diagram-project" style={{ color: 'var(--accent-purple)' }}></i> Behavioral Flows & Structural UML Diagrams</h2>
+              <p className="section-desc">Data flow decomposition, class diagrams, and event sequence message flows.</p>
+            </div>
+            <button className={`btn ${isEditing ? 'btn-primary' : 'btn-outline'} btn-sm`} onClick={() => { if (isEditing) handleSave(); else { setDraft(currentCode); setIsEditing(true); } }}>
+              <i className={`fa-solid ${isEditing ? 'fa-check' : 'fa-code'}`}></i> {isEditing ? 'Apply Diagram Code' : 'Edit Diagram Code'}
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+            {types.map(t => (
+              <button key={t.key} className={`filter-btn ${type === t.key ? 'active' : ''}`} onClick={() => { setType(t.key); setIsEditing(false); }}>
+                <i className={`fa-solid ${t.icon}`} style={{ marginRight: '6px' }}></i> {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="diagram-viewer-card">
+            <div className="diagram-toolbar">
+              <span style={{ fontWeight: '700' }}>{types.find(t => t.key === type)?.label}</span>
+              <span className="badge badge-purple">Mermaid SVG</span>
+            </div>
+
+            {isEditing ? (
+              <div style={{ padding: '1rem' }}>
+                <textarea className="diagram-code-editor" style={{ minHeight: '380px' }} value={draft} onChange={e => setDraft(e.target.value)} />
+                <div style={{ marginTop: '0.5rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setIsEditing(false)}>Cancel</button>
+                  <button className="btn btn-primary btn-sm" onClick={handleSave}>Save & Render</button>
+                </div>
+              </div>
+            ) : (
+              <MermaidViewer chartCode={currentCode} id={`flow_${type}`} />
+            )}
+          </div>
+        </div>
+      );
+    };
+
+    // --- COMPONENT: TAB 5 USER STORIES ---
+    const TabStories = () => {
+      const dispatch = useDispatch();
+      const stories = useSelector(state => state.project.currentProject.stories || []);
+      const [epicFilter, setEpicFilter] = useState('ALL');
+      const [showModal, setShowModal] = useState(false);
+      const [newStory, setNewStory] = useState({ id: `US-${Date.now().toString().slice(-4)}`, title: '', epic: 'AUTH', points: 3, priority: 'Must', status: 'To Do', statement: '' });
+
+      const totalPoints = stories.reduce((acc, s) => acc + (parseInt(s.points) || 0), 0);
+      const epics = ['ALL', ...new Set(stories.map(s => s.epic))];
+      const filtered = stories.filter(s => epicFilter === 'ALL' || s.epic === epicFilter);
+
+      const handleSave = (e) => {
+        e.preventDefault();
+        dispatch({ type: 'ADD_STORY', payload: { ...newStory } });
+        setNewStory({ id: `US-${Date.now().toString().slice(-4)}`, title: '', epic: 'AUTH', points: 3, priority: 'Must', status: 'To Do', statement: '' });
+        setShowModal(false);
+      };
+
+      return (
+        <div className="tab-content">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title"><i className="fa-solid fa-list-check" style={{ color: 'var(--accent-emerald)' }}></i> Agile User Stories & Story Points Matrix</h2>
+              <p className="section-desc">Comprehensive story backlog with Fibonacci estimation and sprint allocations.</p>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
+              <i className="fa-solid fa-plus"></i> Add User Story
+            </button>
+          </div>
+
+          <div className="card" style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total Backlog Velocity</div>
+                <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--accent-cyan)' }}>
+                  {totalPoints} <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Story Points</span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginLeft: '12px' }}>({stories.length} User Stories)</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <div style={{ padding: '0.5rem 1rem', background: 'rgba(30,41,59,0.7)', borderRadius: 'var(--radius-md)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Avg Complexity</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--accent-indigo)' }}>
+                    {stories.length ? (totalPoints / stories.length).toFixed(1) : 0} pts
+                  </div>
+                </div>
+                <div style={{ padding: '0.5rem 1rem', background: 'rgba(30,41,59,0.7)', borderRadius: 'var(--radius-md)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>Sprint Estimates</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--accent-emerald)' }}>
+                    {Math.ceil(totalPoints / 20)} Sprints (~20 pts/ea)
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="story-filters">
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)', fontWeight: '600' }}>Filter by Epic:</span>
+            {epics.map(ep => (
+              <button key={ep} className={`filter-btn ${epicFilter === ep ? 'active' : ''}`} onClick={() => setEpicFilter(ep)}>
+                {ep}
+              </button>
+            ))}
+          </div>
+
+          <div className="stories-grid">
+            {filtered.map(s => (
+              <div key={s.id} className="story-card">
+                <div>
+                  <div className="story-card-top">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span className="story-id">{s.id}</span>
+                      <span className="badge badge-purple">{s.epic}</span>
+                      <span className={`badge ${s.priority === 'Must' ? 'badge-rose' : 'badge-amber'}`}>{s.priority}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span className="point-badge">{s.points} pts</span>
+                      <button className="btn btn-danger btn-sm" style={{ padding: '0.2rem 0.4rem' }} onClick={() => dispatch({ type: 'DELETE_STORY', payload: s.id })}>
+                        <i className="fa-solid fa-trash-can"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <h4 className="story-title">{s.title}</h4>
+                  <p className="story-statement">{s.statement}</p>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>Status:</span>
+                  <select
+                    className="form-select"
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem' }}
+                    value={s.status || 'To Do'}
+                    onChange={e => dispatch({ type: 'UPDATE_STORY', payload: { ...s, status: e.target.value } })}
+                  >
+                    <option value="To Do">To Do</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Done">Done</option>
+                  </select>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {showModal && (
+            <div className="modal-backdrop" onClick={() => setShowModal(false)}>
+              <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3 className="modal-title">Create User Story</h3>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowModal(false)}><i className="fa-solid fa-xmark"></i></button>
+                </div>
+                <form onSubmit={handleSave}>
+                  <div className="modal-body">
+                    <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '1rem' }}>
+                      <div className="form-group">
+                        <label className="form-label">ID</label>
+                        <input className="form-input" value={newStory.id} onChange={e => setNewStory({ ...newStory, id: e.target.value })} required />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Title</label>
+                        <input className="form-input" value={newStory.title} onChange={e => setNewStory({ ...newStory, title: e.target.value })} placeholder="Feature title" required />
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                      <div className="form-group">
+                        <label className="form-label">Epic</label>
+                        <input className="form-input" value={newStory.epic} onChange={e => setNewStory({ ...newStory, epic: e.target.value.toUpperCase() })} required />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Points</label>
+                        <select className="form-select" value={newStory.points} onChange={e => setNewStory({ ...newStory, points: parseInt(e.target.value) })}>
+                          <option value="1">1 pt</option>
+                          <option value="2">2 pts</option>
+                          <option value="3">3 pts</option>
+                          <option value="5">5 pts</option>
+                          <option value="8">8 pts</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Priority</label>
+                        <select className="form-select" value={newStory.priority} onChange={e => setNewStory({ ...newStory, priority: e.target.value })}>
+                          <option value="Must">Must</option>
+                          <option value="Should">Should</option>
+                          <option value="Could">Could</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Role Statement (As a... I want... So that...)</label>
+                      <textarea className="form-textarea" value={newStory.statement} onChange={e => setNewStory({ ...newStory, statement: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary">Add Story</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // --- COMPONENT: TAB 6 ROADMAP ---
+    const TabRoadmap = () => {
+      const dispatch = useDispatch();
+      const roadmap = useSelector(state => state.project.currentProject.roadmap || []);
+      const [showModal, setShowModal] = useState(false);
+      const [item, setItem] = useState({ horizon: 'Horizon 1 (0-3 Months)', title: '', impact: 'High', status: 'Planned', desc: '' });
+
+      const horizons = ['Horizon 1 (0-3 Months)', 'Horizon 2 (3-6 Months)', 'Horizon 3 (6-12 Months)'];
+
+      const handleSave = (e) => {
+        e.preventDefault();
+        dispatch({ type: 'ADD_ROADMAP', payload: { id: 'r_' + Date.now(), ...item } });
+        setItem({ horizon: 'Horizon 1 (0-3 Months)', title: '', impact: 'High', status: 'Planned', desc: '' });
+        setShowModal(false);
+      };
+
+      return (
+        <div className="tab-content">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title"><i className="fa-solid fa-road" style={{ color: 'var(--accent-amber)' }}></i> Architectural Horizons & Further Work</h2>
+              <p className="section-desc">Technical debt assessment, scalability milestones, and microservices decomposition roadmap.</p>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}>
+              <i className="fa-solid fa-plus"></i> Add Initiative
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {horizons.map(hz => {
+              const list = roadmap.filter(r => r.horizon === hz);
+              return (
+                <div key={hz} className="card">
+                  <div className="card-header">
+                    <h3 className="card-title"><i className="fa-solid fa-flag-checkered" style={{ color: 'var(--accent-cyan)' }}></i> {hz}</h3>
+                    <span className="badge badge-cyan">{list.length} Initiatives</span>
+                  </div>
+                  <div className="grid-2">
+                    {list.map(r => (
+                      <div key={r.id} style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.5rem' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span className={`badge ${r.impact === 'Critical' ? 'badge-rose' : 'badge-amber'}`}>{r.impact} Impact</span>
+                            <button className="btn btn-danger btn-sm" style={{ padding: '0.2rem 0.4rem' }} onClick={() => dispatch({ type: 'DELETE_ROADMAP', payload: r.id })}>
+                              <i className="fa-solid fa-trash-can"></i>
+                            </button>
+                          </div>
+                          <h4 style={{ fontSize: '0.95rem', fontWeight: '700', marginTop: '0.5rem' }}>{r.title}</h4>
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{r.desc}</p>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <span className="badge badge-emerald">{r.status}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {showModal && (
+            <div className="modal-backdrop" onClick={() => setShowModal(false)}>
+              <div className="modal-card" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3 className="modal-title">Define Architectural Initiative</h3>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowModal(false)}><i className="fa-solid fa-xmark"></i></button>
+                </div>
+                <form onSubmit={handleSave}>
+                  <div className="modal-body">
+                    <div className="form-group">
+                      <label className="form-label">Horizon</label>
+                      <select className="form-select" value={item.horizon} onChange={e => setItem({ ...item, horizon: e.target.value })}>
+                        <option value="Horizon 1 (0-3 Months)">Horizon 1 (0-3 Months)</option>
+                        <option value="Horizon 2 (3-6 Months)">Horizon 2 (3-6 Months)</option>
+                        <option value="Horizon 3 (6-12 Months)">Horizon 3 (6-12 Months)</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Title</label>
+                      <input className="form-input" value={item.title} onChange={e => setItem({ ...item, title: e.target.value })} required />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Impact</label>
+                      <select className="form-select" value={item.impact} onChange={e => setItem({ ...item, impact: e.target.value })}>
+                        <option value="Critical">Critical</option>
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Description</label>
+                      <textarea className="form-textarea" value={item.desc} onChange={e => setItem({ ...item, desc: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary">Save Initiative</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // --- COMPONENT: TAB 7 SPEC EXPORTER ---
+    const TabExport = () => {
+      const project = useSelector(state => state.project.currentProject);
+      const [copied, setCopied] = useState(false);
+      const md = compileMarkdownSpec(project);
+
+      const handleDownload = () => {
+        const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${project.id || 'system'}_SDLC_SPECIFICATION.md`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      };
+
+      const handleCopy = () => {
+        navigator.clipboard.writeText(md);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      };
+
+      return (
+        <div className="tab-content">
+          <div className="section-header">
+            <div>
+              <h2 className="section-title"><i className="fa-solid fa-file-lines" style={{ color: 'var(--accent-cyan)' }}></i> SDLC Specification Exporter</h2>
+              <p className="section-desc">Compile your entire system architecture, ERD, flows, and stories into publication-ready Markdown.</p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => window.print()}><i className="fa-solid fa-print"></i> Print</button>
+              <button className="btn btn-secondary btn-sm" onClick={handleCopy}><i className={`fa-solid ${copied ? 'fa-check' : 'fa-copy'}`}></i> {copied ? 'Copied' : 'Copy Markdown'}</button>
+              <button className="btn btn-primary btn-sm" onClick={handleDownload}><i className="fa-solid fa-download"></i> Download .md</button>
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div className="card-header" style={{ padding: '0.75rem 1.25rem', margin: 0 }}>
+              <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>Generated Markdown Preview: {project.name}.md</span>
+              <span className="badge badge-emerald">Ready</span>
+            </div>
+            <div style={{ padding: '1.5rem', background: '#050811' }}>
+              <pre style={{ fontFamily: 'var(--font-code)', fontSize: '0.85rem', color: '#94a3b8', whiteSpace: 'pre-wrap', maxHeight: '650px', overflowY: 'auto' }}>
+                {md}
+              </pre>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // --- MAIN ROOT APPLICATION COMPONENT ---
+    const App = () => {
+      const activeTab = useSelector(state => state.project.activeTab);
+      const alerts = useSelector(state => state.alert);
+
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          <Navbar />
+          <main className="app-container" style={{ flex: 1 }}>
+            {alerts.length > 0 && (
+              <div className="alert-wrapper">
+                {alerts.map(a => (
+                  <div key={a.id} className={`alert-banner alert-${a.alertType}`}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className={`fa-solid ${a.alertType === 'danger' ? 'fa-circle-exclamation' : 'fa-circle-check'}`}></i>
+                      <span>{a.msg}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {activeTab === 'overview' && <TabOverview />}
+            {activeTab === 'architecture' && <TabArchitecture />}
+            {activeTab === 'erd' && <TabErd />}
+            {activeTab === 'flows' && <TabFlows />}
+            {activeTab === 'stories' && <TabStories />}
+            {activeTab === 'roadmap' && <TabRoadmap />}
+            {activeTab === 'export' && <TabExport />}
+          </main>
+          <footer style={{ textAlign: 'center', padding: '1.5rem', borderTop: '1px solid var(--border-color)', color: 'var(--text-dim)', fontSize: '0.8rem' }}>
+            PlanCraft SDLC Studio &copy; 2026 &bull; Universal Architecture & System Design Inception Suite
+          </footer>
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(
+      <Provider store={rootStore}>
+        <App />
+      </Provider>
+    );
+  </script>
+</body>
+</html>

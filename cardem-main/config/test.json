@@ -1,0 +1,6 @@
+{
+  "mongoURI": "mongodb://127.0.0.1:27017/cardem_test",
+  "jwtSecret": "cardem_jwt_test_secret_key_2026",
+  "jwtExpiration": "2h",
+  "port": 5001
+}

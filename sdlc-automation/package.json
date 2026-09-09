@@ -1,0 +1,26 @@
+{
+  "name": "sdlc-automation",
+  "version": "1.0.0",
+  "description": "Autonomous SDLC Inception Engine - Transform conversational ideas into production-ready software specifications",
+  "main": "src/cli.js",
+  "type": "module",
+  "bin": {
+    "asie": "src/cli.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js",
+    "generate": "node src/cli.js",
+    "web": "node -e \"console.log('Open file://' + require('path').resolve('src/interactive_runner.html'))\""
+  },
+  "keywords": [
+    "sdlc",
+    "architecture",
+    "automation",
+    "multi-agent",
+    "system-design",
+    "mermaid",
+    "agile"
+  ],
+  "author": "Antigravity Engineering",
+  "license": "ISC"
+}

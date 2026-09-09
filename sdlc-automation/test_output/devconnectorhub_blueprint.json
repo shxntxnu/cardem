@@ -1,0 +1,415 @@
+{
+  "id": "devconnectorhub",
+  "name": "DevConnectorHub Platform",
+  "version": "1.0.0",
+  "description": "DevConnector Extensions",
+  "targetStack": {
+    "frontend": "React 18, Redux Toolkit, React-Router v6, CSS System",
+    "backend": "Node.js, Express 5.x, JWT Authentication, Express-Validator",
+    "database": "PostgreSQL 16, Prisma ORM",
+    "external": "Stripe Payments, AWS S3 Media Storage, SendGrid Email"
+  },
+  "architecture": {
+    "businessLayer": [
+      {
+        "id": "b1",
+        "title": "Identity Verification & Credential Hardening",
+        "desc": "Email serves as unique account handle; passwords salted with bcrypt factor 10. Sessions governed by stateless HMAC-SHA256 JWT tokens."
+      },
+      {
+        "id": "b2",
+        "title": "State Transition & Domain Integrity Invariant",
+        "desc": "Mutations require strict ownership assertion (req.user.id matches resource.user). State transitions adhere to finite state machine rules."
+      },
+      {
+        "id": "b3",
+        "title": "Idempotency & Concurrent Conflict Resolution",
+        "desc": "Financial and booking operations require client-generated idempotency keys. Double-booking or duplicate actions are rejected with HTTP 400/409."
+      },
+      {
+        "id": "b4",
+        "title": "Cascading Account Deletion Policy",
+        "desc": "User account deletion triggers atomic cascade purging user credentials, profiles, authored content, and associated subdocuments."
+      }
+    ],
+    "dataLayer": [
+      {
+        "collection": "users",
+        "type": "Table",
+        "count": "1:N with domain records",
+        "index": "{ email: 1 } (Unique)"
+      },
+      {
+        "collection": "profiles",
+        "type": "Table",
+        "count": "1:1 with users",
+        "index": "{ user: 1 } (Unique)"
+      },
+      {
+        "collection": "core_resources",
+        "type": "Table",
+        "count": "1:N with users",
+        "index": "{ user: 1 }, { status: 1 }"
+      },
+      {
+        "collection": "transactions",
+        "type": "Table",
+        "count": "1:N with resources",
+        "index": "{ user_id: 1 }, { created_at: -1 }"
+      }
+    ],
+    "functionalLayer": [
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/register",
+        "access": "Public",
+        "desc": "Register account credentials and receive JWT bearer token"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/login",
+        "access": "Public",
+        "desc": "Authenticate email/password and obtain session token"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/me",
+        "access": "Private",
+        "desc": "Retrieve authenticated identity payload"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/resources",
+        "access": "Public",
+        "desc": "Query active domain catalog with filter and cursor pagination"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/resources",
+        "access": "Private",
+        "desc": "Create new domain resource entity"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/resources/:id",
+        "access": "Public",
+        "desc": "Fetch single resource entity by ID"
+      },
+      {
+        "method": "PUT",
+        "path": "/api/v1/resources/:id",
+        "access": "Private",
+        "desc": "Update owned resource entity (author verified)"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/resources/:id",
+        "access": "Private",
+        "desc": "Remove resource entity (author verified)"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/transactions",
+        "access": "Private",
+        "desc": "Initiate state action / booking / payment transaction"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/account",
+        "access": "Private",
+        "desc": "Cascading purge of account and associated records"
+      }
+    ]
+  },
+  "erd": {
+    "entities": [
+      {
+        "id": "ent_1",
+        "name": "USER_ACCOUNT",
+        "description": "System authenticated user identity and login record",
+        "fields": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "key": "PK"
+          },
+          {
+            "name": "email",
+            "type": "String",
+            "key": "UK"
+          },
+          {
+            "name": "password_hash",
+            "type": "String (Bcrypt)",
+            "key": ""
+          },
+          {
+            "name": "full_name",
+            "type": "String",
+            "key": ""
+          },
+          {
+            "name": "created_at",
+            "type": "Timestamp",
+            "key": ""
+          }
+        ]
+      },
+      {
+        "id": "ent_2",
+        "name": "USER_PROFILE",
+        "description": "Extended user metadata and operational preferences",
+        "fields": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "key": "PK"
+          },
+          {
+            "name": "user_id",
+            "type": "UUID",
+            "key": "FK"
+          },
+          {
+            "name": "phone_number",
+            "type": "String",
+            "key": ""
+          },
+          {
+            "name": "status",
+            "type": "String",
+            "key": ""
+          },
+          {
+            "name": "updated_at",
+            "type": "Timestamp",
+            "key": ""
+          }
+        ]
+      },
+      {
+        "id": "ent_3",
+        "name": "DOMAIN_RESOURCE",
+        "description": "Core domain asset, inventory item, or primary model",
+        "fields": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "key": "PK"
+          },
+          {
+            "name": "owner_id",
+            "type": "UUID",
+            "key": "FK"
+          },
+          {
+            "name": "title",
+            "type": "String",
+            "key": ""
+          },
+          {
+            "name": "description",
+            "type": "Text",
+            "key": ""
+          },
+          {
+            "name": "status",
+            "type": "String",
+            "key": ""
+          },
+          {
+            "name": "created_at",
+            "type": "Timestamp",
+            "key": ""
+          }
+        ]
+      },
+      {
+        "id": "ent_4",
+        "name": "TRANSACTION_RECORD",
+        "description": "Order, booking, activity log, or operational event",
+        "fields": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "key": "PK"
+          },
+          {
+            "name": "user_id",
+            "type": "UUID",
+            "key": "FK"
+          },
+          {
+            "name": "resource_id",
+            "type": "UUID",
+            "key": "FK"
+          },
+          {
+            "name": "amount_cents",
+            "type": "Integer",
+            "key": ""
+          },
+          {
+            "name": "status",
+            "type": "String",
+            "key": ""
+          },
+          {
+            "name": "timestamp",
+            "type": "Timestamp",
+            "key": ""
+          }
+        ]
+      }
+    ],
+    "mermaidSyntax": "erDiagram\n    USER_ACCOUNT ||--o| USER_PROFILE : \"has\"\n    USER_ACCOUNT ||--o{ DOMAIN_RESOURCE : \"owns\"\n    USER_ACCOUNT ||--o{ TRANSACTION_RECORD : \"executes\"\n    DOMAIN_RESOURCE ||--o{ TRANSACTION_RECORD : \"targeted_by\"\n\n    USER_ACCOUNT {\n        UUID id PK\n        String email UK\n        String password_hash\n        String full_name\n        Timestamp created_at\n    }\n    USER_PROFILE {\n        UUID id PK\n        UUID user_id FK\n        String phone_number\n        String status\n    }\n    DOMAIN_RESOURCE {\n        UUID id PK\n        UUID owner_id FK\n        String title\n        String status\n        Timestamp created_at\n    }\n    TRANSACTION_RECORD {\n        UUID id PK\n        UUID user_id FK\n        UUID resource_id FK\n        Integer amount_cents\n        String status\n    }"
+  },
+  "diagrams": {
+    "dfdLevel0": "graph TD\n    User([End User / Client App])\n    Admin([Platform Administrator])\n    ExtSystem([External Services & Payments])\n\n    subgraph \"DevConnectorHub Platform Boundary\"\n        CoreEngine[\"DevConnectorHub Platform Engine<br/>API Gateway & Business Logic\"]\n    end\n\n    User -->|\"Authentication & Commands\"| CoreEngine\n    CoreEngine -->|\"Hydrated JSON Payloads\"| User\n    Admin -->|\"Management & Audit Policies\"| CoreEngine\n    CoreEngine -->|\"Events & Webhook Notifications\"| ExtSystem\n    ExtSystem -->|\"Webhook Callbacks\"| CoreEngine",
+    "dfdLevel1": "graph TD\n    Client([Client Application])\n    D1[(\"D1: User Identity Store\")]\n    D2[(\"D2: Resource Domain Store\")]\n    D3[(\"D3: Transaction Ledger\")]\n\n    P1[\"1.0 Identity & Session Auth\"]\n    P2[\"2.0 Resource Lifecycle Service\"]\n    P3[\"3.0 Transaction & Event Dispatcher\"]\n\n    Client -->|\"Credentials\"| P1\n    P1 -->|\"Write / Verify User\"| D1\n    P1 -->|\"Signed JWT Token\"| Client\n\n    Client -->|\"Manage Resource\"| P2\n    P2 -->|\"Verify Token\"| D1\n    P2 -->|\"Read / Mutate Resource\"| D2\n    D2 -->|\"Stream Resource State\"| Client\n\n    Client -->|\"Execute Transaction\"| P3\n    P3 -->|\"Lock / Validate Resource\"| D2\n    P3 -->|\"Persist Record\"| D3\n    D3 -->|\"Receipt Confirmation\"| Client",
+    "classDiagram": "classDiagram\n    class UserAccount {\n        +UUID id\n        +String email\n        +String passwordHash\n        +createSession()\n        +validateCredentials()\n    }\n    class UserProfile {\n        +UUID id\n        +UUID userId\n        +String status\n        +updateProfile()\n    }\n    class DomainResource {\n        +UUID id\n        +UUID ownerId\n        +String title\n        +String status\n        +publish()\n        +archive()\n    }\n    class TransactionRecord {\n        +UUID id\n        +UUID userId\n        +UUID resourceId\n        +Integer amountCents\n        +execute()\n    }\n    UserAccount \"1\" <-- \"0..1\" UserProfile : references\n    UserAccount \"1\" <-- \"0..*\" DomainResource : owns\n    DomainResource \"1\" <-- \"0..*\" TransactionRecord : target",
+    "sequenceAuth": "sequenceDiagram\n    autonumber\n    actor User as Client User\n    participant Router as Express API Router\n    participant Auth as Auth Middleware\n    participant Service as Domain Service\n    participant DB as Persistent Database\n\n    User->>Router: POST /api/v1/auth/login { email, password }\n    Router->>Auth: Ingest credentials\n    Auth->>DB: UserAccount.findOne({ email })\n    alt Credentials Valid\n        DB-->>Auth: User Record Found\n        Auth->>Auth: Verify bcrypt hash & generate JWT\n        Auth-->>User: 200 OK { token, user }\n    else Invalid Credentials\n        DB-->>Auth: null or mismatch\n        Auth-->>User: 400 Bad Request { msg: \"Invalid credentials\" }\n    end\n\n    Note over User, DB: Subsequent Authenticated Request\n    User->>Router: POST /api/v1/resources (Header: Bearer Token)\n    Router->>Auth: Verify JWT signature\n    Auth-->>Router: req.user = { id: \"user_uuid\" }\n    Router->>Service: Create Resource Entity\n    Service->>DB: DomainResource.save()\n    DB-->>Service: Saved Record\n    Service-->>User: 201 Created { resource }"
+  },
+  "stories": [
+    {
+      "id": "US-AUTH-01",
+      "epic": "AUTH",
+      "title": "User Registration & Credential Hashing",
+      "statement": "As a new user, I want to create an account with my email and password, so that I can establish an authenticated identity.",
+      "points": 5,
+      "priority": "Must",
+      "status": "To Do",
+      "acceptance_criteria": [
+        "Scenario: Successful registration\n  Given an email and password of at least 8 characters\n  When the user submits registration\n  Then the system hashes the password with bcrypt salt factor 10\n  And returns a signed JWT bearer token.",
+        "Scenario: Duplicate email rejection\n  Given an existing registered email\n  When registration is attempted with the same email\n  Then HTTP 400 is returned with \"User already exists\"."
+      ]
+    },
+    {
+      "id": "US-AUTH-02",
+      "epic": "AUTH",
+      "title": "Secure User Login",
+      "statement": "As a registered user, I want to log in with my credentials, so that I can access my protected workspace.",
+      "points": 3,
+      "priority": "Must",
+      "status": "To Do",
+      "acceptance_criteria": [
+        "Scenario: Valid credentials login\n  Given valid email and password\n  When submitted\n  Then HTTP 200 with JWT is returned."
+      ]
+    },
+    {
+      "id": "US-AUTH-03",
+      "epic": "AUTH",
+      "title": "Persistent Session Recovery",
+      "statement": "As an authenticated user, I want my session to remain active upon browser refresh, so that I do not need to re-login repeatedly.",
+      "points": 2,
+      "priority": "Must",
+      "status": "To Do",
+      "acceptance_criteria": [
+        "Scenario: Session hydration on refresh\n  Given a stored JWT token in client storage\n  When the client initializes\n  Then GET /api/v1/auth/me is called and state is populated."
+      ]
+    },
+    {
+      "id": "US-RES-01",
+      "epic": "CORE",
+      "title": "Resource Catalog Browsing with Keyset Pagination",
+      "statement": "As a user, I want to browse active domain items with filtering and cursor pagination, so that I can explore offerings smoothly.",
+      "points": 3,
+      "priority": "Must",
+      "status": "To Do",
+      "acceptance_criteria": [
+        "Scenario: Keyset query execution\n  Given limit parameter of 20\n  When resources are queried\n  Then up to 20 items are returned along with nextCursor."
+      ]
+    },
+    {
+      "id": "US-RES-02",
+      "epic": "CORE",
+      "title": "Create and Publish Domain Resource",
+      "statement": "As an authorized user, I want to create and publish a domain resource, so that other users can discover it.",
+      "points": 3,
+      "priority": "Must",
+      "status": "To Do",
+      "acceptance_criteria": [
+        "Scenario: Resource publishing\n  Given required title and description attributes\n  When submitted with JWT\n  Then record is created in database with owner_id set to req.user.id."
+      ]
+    },
+    {
+      "id": "US-RES-03",
+      "epic": "CORE",
+      "title": "Author-Only Resource Deletion",
+      "statement": "As a resource creator, I want to delete my own items, so that I can remove obsolete listings.",
+      "points": 3,
+      "priority": "Must",
+      "status": "To Do",
+      "acceptance_criteria": [
+        "Scenario: Authorized deletion\n  Given user owns resource R\n  When DELETE request is submitted\n  Then resource R is removed.",
+        "Scenario: Unauthorized deletion attempt\n  Given user B does not own resource R\n  When user B attempts DELETE\n  Then HTTP 401 Unauthorized is returned."
+      ]
+    },
+    {
+      "id": "US-OPS-01",
+      "epic": "OPS",
+      "title": "Execute Domain Transaction / Booking",
+      "statement": "As a client, I want to execute a transaction on a selected resource, so that my reservation or order is confirmed.",
+      "points": 5,
+      "priority": "Must",
+      "status": "To Do",
+      "acceptance_criteria": [
+        "Scenario: Atomic reservation execution\n  Given resource R is available\n  When transaction is submitted\n  Then state transitions to RESERVED with immutable audit log."
+      ]
+    },
+    {
+      "id": "US-SYS-01",
+      "epic": "SYS",
+      "title": "Cascading Account Purge & GDPR Erasure",
+      "statement": "As a registered user, I want to permanently delete my account, so that all my personal data and records are eradicated.",
+      "points": 8,
+      "priority": "Must",
+      "status": "To Do",
+      "acceptance_criteria": [
+        "Scenario: Complete cascade delete\n  When user confirms account deletion\n  Then profile, credentials, resources, and sessions are purged."
+      ]
+    }
+  ],
+  "roadmap": [
+    {
+      "id": "r1",
+      "horizon": "Horizon 1 (0-3 Months)",
+      "title": "Dual-Token Refresh Architecture & Rate Limiting",
+      "impact": "High",
+      "status": "Planned",
+      "desc": "Implement 15-minute access tokens with 7-day rotated HttpOnly refresh tokens in Redis. Add express-rate-limit."
+    },
+    {
+      "id": "r2",
+      "horizon": "Horizon 1 (0-3 Months)",
+      "title": "Keyset / Cursor-Based Query Pagination",
+      "impact": "High",
+      "status": "Planned",
+      "desc": "Enforce keyset pagination with cursor and limit across all catalog endpoints to eliminate unbounded query heap exhaustion."
+    },
+    {
+      "id": "r3",
+      "horizon": "Horizon 2 (3-6 Months)",
+      "title": "WebSockets Real-Time Push Notification Engine",
+      "impact": "High",
+      "status": "Planned",
+      "desc": "Integrate Socket.io cluster with Redis pub/sub adapter for instant status and transaction push alerts."
+    },
+    {
+      "id": "r4",
+      "horizon": "Horizon 2 (3-6 Months)",
+      "title": "Distributed Redis Cache & Full-Text Search",
+      "impact": "Medium",
+      "status": "Planned",
+      "desc": "Deploy Redis cluster for resource caching and integrate Elasticsearch / Atlas Search for fuzzy queries."
+    },
+    {
+      "id": "r5",
+      "horizon": "Horizon 3 (6-12 Months)",
+      "title": "Microservices Decomposition & Apache Kafka Event Log",
+      "impact": "Critical",
+      "status": "Planned",
+      "desc": "Decompose monolithic services into Auth, Resource, and Transaction microservices communicating via an Apache Kafka distributed bus."
+    }
+  ]
+}
