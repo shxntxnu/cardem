@@ -9,15 +9,49 @@ const User = require('../../models/User');
 const DriveStats = require('../../models/DriveStats');
 const HazardAlert = require('../../models/HazardAlert');
 
+// Helper to generate a unique 6-character automotive friend code
+async function generateUniqueFriendCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  let exists = true;
+  while (exists) {
+    code = 'CRD-';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const found = await Profile.findOne({ friend_code: code });
+    if (!found) exists = false;
+  }
+  return code;
+}
+
 // @route    GET api/profile/me
 // @desc     Get current authenticated user's profile and garage
 // @access   Private
 router.get('/me', auth, async (req, res) => {
   try {
-    const profile = await Profile.findOne({ user: req.user.id }).populate('user', ['name', 'avatar', 'email']);
+    let profile = await Profile.findOne({ user: req.user.id })
+      .populate('user', ['name', 'avatar', 'email'])
+      .populate('friends.user', ['name', 'avatar', 'email']);
 
     if (!profile) {
-      return res.status(404).json({ msg: 'There is no profile for this user' });
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ msg: 'User not found' });
+      }
+      const friendCode = await generateUniqueFriendCode();
+      profile = new Profile({
+        user: req.user.id,
+        handle: user.name,
+        friend_code: friendCode,
+        garage: [],
+        friends: []
+      });
+      await profile.save();
+      await profile.populate('user', ['name', 'avatar', 'email']);
+    } else if (!profile.friend_code) {
+      profile.friend_code = await generateUniqueFriendCode();
+      await profile.save();
     }
 
     res.json(profile);
@@ -135,33 +169,47 @@ router.put(
       model,
       year,
       vehicle_type,
+      type,
+      nickname,
       color,
       horsepower,
       modifications,
+      mods,
       photo,
       is_primary
     } = req.body;
+
+    const rawType = vehicle_type || type || 'Car';
+    const normalizedType = rawType.toString().toLowerCase() === 'motorcycle' ? 'Motorcycle' : 'Car';
+    const rawMods = modifications || mods || [];
+    const normalizedMods = Array.isArray(rawMods)
+      ? rawMods
+      : typeof rawMods === 'string'
+      ? rawMods.split(',').map((m) => m.trim()).filter(Boolean)
+      : [];
 
     const newVehicle = {
       make,
       model,
       year: parseInt(year),
-      vehicle_type: vehicle_type === 'Motorcycle' ? 'Motorcycle' : 'Car',
+      vehicle_type: normalizedType,
+      nickname: nickname || '',
       color: color || '',
       horsepower: horsepower ? parseInt(horsepower) : null,
-      modifications: Array.isArray(modifications)
-        ? modifications
-        : typeof modifications === 'string'
-        ? modifications.split(',').map(m => m.trim()).filter(Boolean)
-        : [],
+      modifications: normalizedMods,
       photo: photo || '',
       is_primary: Boolean(is_primary)
     };
 
     try {
-      const profile = await Profile.findOne({ user: req.user.id });
+      let profile = await Profile.findOne({ user: req.user.id });
       if (!profile) {
-        return res.status(404).json({ msg: 'Profile not found. Please create a profile first.' });
+        const user = await User.findById(req.user.id);
+        profile = new Profile({
+          user: req.user.id,
+          handle: user ? user.name : 'Driver',
+          garage: []
+        });
       }
 
       // If set as primary, unmark existing primary vehicles
@@ -259,6 +307,177 @@ router.delete('/', auth, async (req, res) => {
     ]);
 
     res.json({ msg: 'Account and associated records purged successfully' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route    POST api/profile/friends/add
+// @desc     Add a friend using their unique friend code (CRD-XXXXXX)
+// @access   Private
+router.post(
+  '/friends/add',
+  [
+    auth,
+    [
+      check('friend_code', 'Please enter a valid friend code').not().isEmpty().trim()
+    ]
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { friend_code } = req.body;
+    const formattedCode = friend_code.toUpperCase().trim();
+
+    try {
+      let myProfile = await Profile.findOne({ user: req.user.id });
+      if (!myProfile) {
+        return res.status(404).json({ msg: 'Your driver profile could not be found' });
+      }
+
+      // Check if user is trying to add themselves
+      if (myProfile.friend_code === formattedCode) {
+        return res.status(400).json({ msg: 'You cannot add your own driver code as a friend' });
+      }
+
+      // Find friend profile by unique code
+      const friendProfile = await Profile.findOne({ friend_code: formattedCode })
+        .populate('user', ['name', 'avatar', 'email']);
+
+      if (!friendProfile) {
+        return res.status(404).json({ msg: 'No driver found with this unique friend code' });
+      }
+
+      // Check if already friends
+      const alreadyFriends = myProfile.friends.some(
+        (f) => f.user.toString() === friendProfile.user._id.toString()
+      );
+      if (alreadyFriends) {
+        return res.status(400).json({ msg: `${friendProfile.user.name} is already in your fleet friends` });
+      }
+
+      // Form mutual friendship
+      myProfile.friends.unshift({ user: friendProfile.user._id });
+      await myProfile.save();
+
+      const friendHasMe = friendProfile.friends.some(
+        (f) => f.user.toString() === req.user.id
+      );
+      if (!friendHasMe) {
+        friendProfile.friends.unshift({ user: req.user.id });
+        await friendProfile.save();
+      }
+
+      const primaryVehicle = friendProfile.garage.find((v) => v.is_primary) || friendProfile.garage[0] || null;
+
+      res.status(200).json({
+        msg: `🎉 Successfully connected with ${friendProfile.user.name}!`,
+        friend: {
+          _id: friendProfile._id,
+          user: friendProfile.user,
+          handle: friendProfile.handle,
+          bio: friendProfile.bio,
+          location: friendProfile.location,
+          driving_style: friendProfile.driving_style,
+          experience_level: friendProfile.experience_level,
+          primary_vehicle: primaryVehicle,
+          vehicles_count: friendProfile.garage.length,
+          overall_safety_rating: friendProfile.overall_safety_rating,
+          total_convoys_completed: friendProfile.total_convoys_completed
+        }
+      });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server Error');
+    }
+  }
+);
+
+// @route    GET api/profile/friends
+// @desc     Get all connected fleet friends with their primary vehicle and status
+// @access   Private
+router.get('/friends', auth, async (req, res) => {
+  try {
+    const myProfile = await Profile.findOne({ user: req.user.id });
+    if (!myProfile || !myProfile.friends || myProfile.friends.length === 0) {
+      return res.json([]);
+    }
+
+    const friendUserIds = myProfile.friends.map((f) => f.user);
+
+    const friendProfiles = await Profile.find({ user: { $in: friendUserIds } })
+      .populate('user', ['name', 'avatar', 'email']);
+
+    const friendsList = friendProfiles.map((p) => {
+      const primaryVehicle = p.garage.find((v) => v.is_primary) || p.garage[0] || null;
+      return {
+        _id: p._id,
+        user: p.user,
+        handle: p.handle,
+        bio: p.bio,
+        location: p.location,
+        driving_style: p.driving_style,
+        experience_level: p.experience_level,
+        primary_vehicle: primaryVehicle,
+        vehicles_count: p.garage.length,
+        overall_safety_rating: p.overall_safety_rating,
+        total_convoys_completed: p.total_convoys_completed
+      };
+    });
+
+    res.json(friendsList);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route    DELETE api/profile/friends/:friend_user_id
+// @desc     Remove a friend by user ID
+// @access   Private
+router.delete('/friends/:friend_user_id', [auth, checkObjectId('friend_user_id')], async (req, res) => {
+  try {
+    const myProfile = await Profile.findOne({ user: req.user.id });
+    if (!myProfile) return res.status(404).json({ msg: 'Profile not found' });
+
+    myProfile.friends = myProfile.friends.filter(
+      (f) => f.user.toString() !== req.params.friend_user_id
+    );
+    await myProfile.save();
+
+    // Remove reciprocally
+    const otherProfile = await Profile.findOne({ user: req.params.friend_user_id });
+    if (otherProfile) {
+      otherProfile.friends = otherProfile.friends.filter(
+        (f) => f.user.toString() !== req.user.id
+      );
+      await otherProfile.save();
+    }
+
+    res.json({ msg: 'Friend removed from fleet', removedUserId: req.params.friend_user_id });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route    GET api/profile/friends/:friend_user_id
+// @desc     Get a specific friend's read-only profile, garage, and vehicle specs
+// @access   Private
+router.get('/friends/:friend_user_id', [auth, checkObjectId('friend_user_id')], async (req, res) => {
+  try {
+    const friendProfile = await Profile.findOne({ user: req.params.friend_user_id })
+      .populate('user', ['name', 'avatar', 'email']);
+
+    if (!friendProfile) {
+      return res.status(404).json({ msg: 'Friend profile not found' });
+    }
+
+    res.json(friendProfile);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');

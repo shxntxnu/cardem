@@ -17,8 +17,12 @@ const VehicleSchema = new mongoose.Schema({
   },
   vehicle_type: {
     type: String,
-    enum: ['Car', 'Motorcycle'],
+    enum: ['Car', 'Motorcycle', 'car', 'motorcycle'],
     default: 'Car'
+  },
+  nickname: {
+    type: String,
+    trim: true
   },
   color: {
     type: String,
@@ -57,6 +61,26 @@ const ProfileSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  friend_code: {
+    type: String,
+    unique: true,
+    sparse: true,
+    uppercase: true,
+    trim: true
+  },
+  friends: [
+    {
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+      },
+      date_added: {
+        type: Date,
+        default: Date.now
+      }
+    }
+  ],
   bio: {
     type: String
   },

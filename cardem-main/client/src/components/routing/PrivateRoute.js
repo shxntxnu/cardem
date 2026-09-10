@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
-const PrivateRoute = ({ component: Component }) => {
+const PrivateRoute = ({ children, component: Component }) => {
   const auth = useSelector((state) => state.auth);
   const { isAuthenticated, loading } = auth;
 
@@ -16,7 +16,7 @@ const PrivateRoute = ({ component: Component }) => {
   }
 
   if (isAuthenticated) {
-    return <Component />;
+    return children ? children : Component ? <Component /> : null;
   }
 
   return <Navigate to="/login" replace />;

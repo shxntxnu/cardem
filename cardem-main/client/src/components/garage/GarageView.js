@@ -38,9 +38,11 @@ const GarageView = ({
     e.preventDefault();
     const payload = {
       ...formData,
+      vehicle_type: type === 'motorcycle' ? 'Motorcycle' : 'Car',
+      modifications: typeof mods === 'string' ? mods.split(',').map((m) => m.trim()).filter(Boolean) : (mods || []),
       year: Number(year),
       horsepower: horsepower ? Number(horsepower) : undefined,
-      mods: typeof mods === 'string' ? mods.split(',').map((m) => m.trim()).filter(Boolean) : mods
+      mods: typeof mods === 'string' ? mods.split(',').map((m) => m.trim()).filter(Boolean) : (mods || [])
     };
     addVehicle(payload);
     setShowAddModal(false);
@@ -216,7 +218,7 @@ const GarageView = ({
           <div className="ride-badge">Active Convoy Ride</div>
           <div className="ride-content">
             <div className="ride-icon">
-              {primaryVehicle.type === 'motorcycle' ? '🏍️' : '🏎️'}
+              {(primaryVehicle.vehicle_type?.toLowerCase() === 'motorcycle' || primaryVehicle.type === 'motorcycle') ? '🏍️' : '🏎️'}
             </div>
             <div className="ride-info">
               <h2>{primaryVehicle.year} {primaryVehicle.make} {primaryVehicle.model}</h2>
@@ -230,7 +232,7 @@ const GarageView = ({
                 {primaryVehicle.color && (
                   <span className="spec-pill">🎨 {primaryVehicle.color}</span>
                 )}
-                <span className="spec-pill">🏷️ {primaryVehicle.type.toUpperCase()}</span>
+                <span className="spec-pill">🏷️ {(primaryVehicle.vehicle_type || primaryVehicle.type || 'Car').toUpperCase()}</span>
               </div>
             </div>
           </div>
@@ -259,7 +261,7 @@ const GarageView = ({
             >
               <div className="vehicle-card-top">
                 <span className="vehicle-type-icon">
-                  {vehicle.type === 'motorcycle' ? '🏍️' : '🏎️'}
+                  {(vehicle.vehicle_type?.toLowerCase() === 'motorcycle' || vehicle.type === 'motorcycle') ? '🏍️' : '🏎️'}
                 </span>
                 {vehicle.is_primary ? (
                   <span className="badge badge-success">ACTIVE RIDE</span>
@@ -288,11 +290,11 @@ const GarageView = ({
                   </div>
                 </div>
 
-                {vehicle.mods && vehicle.mods.length > 0 && (
+                {((vehicle.modifications && vehicle.modifications.length > 0) || (vehicle.mods && vehicle.mods.length > 0)) && (
                   <div className="mods-container">
                     <span className="mods-title">Modifications:</span>
                     <div className="mods-tags">
-                      {vehicle.mods.map((mod, idx) => (
+                      {(vehicle.modifications || vehicle.mods).map((mod, idx) => (
                         <span key={idx} className="mod-tag">{mod}</span>
                       ))}
                     </div>

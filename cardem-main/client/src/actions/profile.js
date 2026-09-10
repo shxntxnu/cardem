@@ -5,7 +5,13 @@ import {
   PROFILE_ERROR,
   UPDATE_PROFILE,
   CLEAR_PROFILE,
-  ACCOUNT_DELETED
+  ACCOUNT_DELETED,
+  GET_FRIENDS,
+  FRIEND_ADDED,
+  FRIEND_REMOVED,
+  GET_FRIEND_DETAILS,
+  CLEAR_FRIEND_DETAILS,
+  FRIEND_ERROR
 } from './types';
 
 // Get current driver's profile & garage
@@ -70,9 +76,14 @@ export const addVehicle = (formData, navigate) => async (dispatch) => {
     }
   } catch (err) {
     const errors = err.response?.data?.errors;
+    const msg = err.response?.data?.msg;
 
     if (errors) {
       errors.forEach((error) => dispatch(setAlert(error.msg, 'danger')));
+    } else if (msg) {
+      dispatch(setAlert(msg, 'danger'));
+    } else {
+      dispatch(setAlert('Failed to add vehicle to garage', 'danger'));
     }
 
     dispatch({
@@ -138,3 +149,102 @@ export const deleteAccount = () => async (dispatch) => {
     }
   }
 };
+
+// Get list of connected fleet friends
+export const getFriends = () => async (dispatch) => {
+  try {
+    const res = await api.get('/profile/friends');
+
+    dispatch({
+      type: GET_FRIENDS,
+      payload: res.data
+    });
+  } catch (err) {
+    dispatch({
+      type: FRIEND_ERROR,
+      payload: { msg: err.response?.statusText, status: err.response?.status }
+    });
+  }
+};
+
+// Add friend by unique code (e.g. CRD-XXXXXX)
+export const addFriendByCode = (friendCode) => async (dispatch) => {
+  try {
+    const res = await api.post('/profile/friends/add', { friend_code: friendCode });
+
+    dispatch({
+      type: FRIEND_ADDED,
+      payload: res.data.friend
+    });
+
+    dispatch(setAlert(res.data.msg || 'Driver added to your fleet friends!', 'success'));
+    return { success: true, friend: res.data.friend };
+  } catch (err) {
+    const errors = err.response?.data?.errors;
+    const msg = err.response?.data?.msg;
+
+    if (errors) {
+      errors.forEach((error) => dispatch(setAlert(error.msg, 'danger')));
+    } else if (msg) {
+      dispatch(setAlert(msg, 'danger'));
+    } else {
+      dispatch(setAlert('Failed to connect with driver', 'danger'));
+    }
+
+    dispatch({
+      type: FRIEND_ERROR,
+      payload: { msg: err.response?.statusText, status: err.response?.status }
+    });
+    return { success: false, error: msg || 'Failed to add friend' };
+  }
+};
+
+// Remove friend by user ID
+export const removeFriend = (friendUserId) => async (dispatch) => {
+  try {
+    await api.delete(`/profile/friends/${friendUserId}`);
+
+    dispatch({
+      type: FRIEND_REMOVED,
+      payload: friendUserId
+    });
+
+    dispatch(setAlert('Friend removed from fleet', 'info'));
+  } catch (err) {
+    dispatch({
+      type: FRIEND_ERROR,
+      payload: { msg: err.response?.statusText, status: err.response?.status }
+    });
+  }
+};
+
+// Get a friend's full read-only profile, fleet garage, and driving statistics
+export const getFriendDetails = (friendUserId) => async (dispatch) => {
+  try {
+    const [profileRes, statsRes] = await Promise.all([
+      api.get(`/profile/friends/${friendUserId}`),
+      api.get(`/stats/user/${friendUserId}`)
+    ]);
+
+    dispatch({
+      type: GET_FRIEND_DETAILS,
+      payload: {
+        profile: profileRes.data,
+        stats: statsRes.data
+      }
+    });
+  } catch (err) {
+    const msg = err.response?.data?.msg || 'Could not load friend details';
+    dispatch(setAlert(msg, 'danger'));
+    dispatch({
+      type: FRIEND_ERROR,
+      payload: { msg: err.response?.statusText, status: err.response?.status }
+    });
+  }
+};
+
+// Clear active selected friend
+export const clearFriendDetails = () => (dispatch) => {
+  dispatch({ type: CLEAR_FRIEND_DETAILS });
+};
+

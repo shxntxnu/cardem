@@ -2,5 +2,5 @@
   "mongoURI": "mongodb://127.0.0.1:27017/cardem",
   "jwtSecret": "cardem_super_secret_jwt_key_car_enthusiast_2026",
   "jwtExpiration": 360000,
-  "port": 5000
+  "port": 5001
 }

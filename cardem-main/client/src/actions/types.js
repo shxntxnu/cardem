@@ -24,6 +24,14 @@ export const VEHICLE_ADDED = 'VEHICLE_ADDED';
 export const VEHICLE_DELETED = 'VEHICLE_DELETED';
 export const VEHICLE_PRIMARY_SET = 'VEHICLE_PRIMARY_SET';
 
+// Friends Network
+export const GET_FRIENDS = 'GET_FRIENDS';
+export const FRIEND_ADDED = 'FRIEND_ADDED';
+export const FRIEND_REMOVED = 'FRIEND_REMOVED';
+export const GET_FRIEND_DETAILS = 'GET_FRIEND_DETAILS';
+export const CLEAR_FRIEND_DETAILS = 'CLEAR_FRIEND_DETAILS';
+export const FRIEND_ERROR = 'FRIEND_ERROR';
+
 // Convoy & Live Map Telemetry
 export const GET_CONVOYS = 'GET_CONVOYS';
 export const GET_CONVOY = 'GET_CONVOY';

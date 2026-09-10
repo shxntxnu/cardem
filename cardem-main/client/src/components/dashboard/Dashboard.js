@@ -64,6 +64,11 @@ const Dashboard = () => {
               <span className="badge badge-purple">
                 <i className="fa-solid fa-trophy"></i> {profile?.experience_level || 'Intermediate'}
               </span>
+              {profile?.friend_code && (
+                <span className="badge badge-cyan" title="Your unique friend code">
+                  <i className="fa-solid fa-key"></i> {profile.friend_code}
+                </span>
+              )}
             </div>
           </div>
         </div>

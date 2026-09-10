@@ -7,6 +7,7 @@ const config = require('config');
 const { check, validationResult } = require('express-validator');
 
 const User = require('../../models/User');
+const Profile = require('../../models/Profile');
 
 // @route    POST api/users
 // @desc     Register car/bike enthusiast user
@@ -52,6 +53,29 @@ router.post(
       user.password = await bcrypt.hash(password, salt);
 
       await user.save();
+
+      // Helper to generate a unique 6-character automotive friend code
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let friendCode = '';
+      let exists = true;
+      while (exists) {
+        friendCode = 'CRD-';
+        for (let i = 0; i < 6; i++) {
+          friendCode += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const found = await Profile.findOne({ friend_code: friendCode });
+        if (!found) exists = false;
+      }
+
+      // Automatically create initial profile for new driver
+      const profile = new Profile({
+        user: user.id,
+        handle: user.name,
+        friend_code: friendCode,
+        garage: [],
+        friends: []
+      });
+      await profile.save();
 
       // Sign JWT Token
       const payload = {

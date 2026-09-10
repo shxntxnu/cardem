@@ -242,4 +242,34 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
+// @route    GET api/stats/user/:user_id
+// @desc     Get aggregated drive statistics summary for a specific driver (e.g. friend)
+// @access   Private
+router.get('/user/:user_id', [auth, checkObjectId('user_id')], async (req, res) => {
+  try {
+    const stats = await DriveStats.find({ user: req.params.user_id })
+      .sort({ completed_at: -1 })
+      .populate('convoy', ['name', 'date', 'status']);
+
+    const totalDistance = stats.reduce((sum, s) => sum + (s.distance_km || 0), 0);
+    const maxSpeedEver = stats.reduce((max, s) => Math.max(max, s.top_speed_kph || 0), 0);
+    const avgSafety = stats.length > 0
+      ? Math.round(stats.reduce((sum, s) => sum + (s.safety_score || 0), 0) / stats.length)
+      : 95;
+
+    res.json({
+      history: stats,
+      summary: {
+        total_drives: stats.length,
+        total_distance_km: Math.round(totalDistance * 10) / 10,
+        max_speed_kph: maxSpeedEver,
+        average_safety_score: avgSafety
+      }
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 module.exports = router;

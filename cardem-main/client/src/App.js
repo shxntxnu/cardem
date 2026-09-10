@@ -20,6 +20,7 @@ import GarageView from './components/garage/GarageView';
 import CreateConvoy from './components/convoy/CreateConvoy';
 import ConvoyLobby from './components/convoy/ConvoyLobby';
 import ConvoyMapHUD from './components/map/ConvoyMapHUD';
+import ConvoysView from './components/convoy/ConvoysView';
 import AlertsFeed from './components/alerts/AlertsFeed';
 import Leaderboard from './components/leaderboard/Leaderboard';
 
@@ -85,7 +86,7 @@ const App = () => {
                 path="/convoys"
                 element={
                   <PrivateRoute>
-                    <Dashboard />
+                    <ConvoysView />
                   </PrivateRoute>
                 }
               />
