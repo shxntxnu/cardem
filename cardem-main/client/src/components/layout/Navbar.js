@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../../actions/auth';
+import EditAccountModal from '../profile/EditAccountModal';
 
 const Navbar = () => {
   const dispatch = useDispatch();
@@ -11,6 +12,7 @@ const Navbar = () => {
 
   const { isAuthenticated, loading, user } = auth;
   const { activeConvoy } = convoy;
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -41,11 +43,26 @@ const Navbar = () => {
 
             {!loading && isAuthenticated && user && (
               <div className="user-profile-badge">
-                <img
-                  src={user.avatar || 'https://www.gravatar.com/avatar/?d=mp'}
-                  alt={user.name}
-                  className="user-avatar-tiny"
-                />
+                <button
+                  type="button"
+                  className="user-avatar-btn"
+                  onClick={() => setShowEditModal(true)}
+                  title="Edit Profile & Account"
+                >
+                  <img
+                    src={user.avatar || 'https://www.gravatar.com/avatar/?d=mp'}
+                    alt={user.name}
+                    className="user-avatar-tiny"
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(true)}
+                  className="settings-gear-btn"
+                  title="Edit Account Settings"
+                >
+                  <i className="fa-solid fa-gear"></i>
+                </button>
                 <button onClick={handleLogout} className="logout-btn" title="Sign Out">
                   <i className="fa-solid fa-arrow-right-from-bracket"></i>
                 </button>
@@ -54,6 +71,12 @@ const Navbar = () => {
           </div>
         </div>
       </header>
+
+      {/* Edit Profile & Account Modal */}
+      <EditAccountModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+      />
 
       {/* Bottom Mobile Navigation Dock */}
       {!loading && isAuthenticated && (

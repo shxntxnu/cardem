@@ -4,14 +4,18 @@ import PropTypes from 'prop-types';
 import { reportHazard } from '../../actions/hazard';
 
 const HAZARD_TYPES = [
-  { id: 'police', label: 'Police Trap', icon: '👮', color: '#ff3860', desc: 'Patrol / Radar Speed Trap' },
-  { id: 'instant_camera', label: 'Speed Camera', icon: '📸', color: '#ff793f', desc: 'Fixed Instant Speed Cam' },
-  { id: 'average_camera', label: 'Avg Speed Zone', icon: '⏱️', color: '#ffb142', desc: 'Average Speed Check Zone' },
-  { id: 'obstruction', label: 'Obstruction', icon: '🚧', color: '#f7b731', desc: 'Debris / Fallen Tree / Object' },
-  { id: 'road_closure', label: 'Road Closed', icon: '⛔', color: '#eb4d4b', desc: 'Complete Road Block / Detour' },
-  { id: 'lane_closure', label: 'Lane Closed', icon: '⚠️', color: '#f0932b', desc: 'Right/Left Lane Cones' },
-  { id: 'traffic_density', label: 'Traffic Jam', icon: '🚗', color: '#e056fd', desc: 'Heavy Congestion / Standstill' },
-  { id: 'traffic_lights', label: 'Traffic Lights', icon: '🚦', color: '#686de0', desc: 'Faulty Signal / Red Cam' }
+  { id: 'police', label: 'Police Trap', icon: '👮', color: '#3b82f6', desc: 'Patrol / Radar Speed Trap' },
+  { id: 'instant_camera', label: 'Speed Camera', icon: '📸', color: '#f97316', desc: 'Fixed Instant Speed Cam' },
+  { id: 'average_camera', label: 'Avg Speed Zone', icon: '⏱️', color: '#eab308', desc: 'Average Speed Check Zone' },
+  { id: 'accident', label: 'Accident / Crash', icon: '💥', color: '#dc2626', desc: 'Vehicle Collision / Blockage' },
+  { id: 'traffic_density', label: 'Traffic Jam', icon: '🚗', color: '#a855f7', desc: 'Heavy Congestion / Standstill' },
+  { id: 'pothole', label: 'Severe Pothole', icon: '🕳️', color: '#d97706', desc: 'Deep Rim-Damage Pothole' },
+  { id: 'stopped_vehicle', label: 'Stopped Vehicle', icon: '🚙', color: '#06b6d4', desc: 'Broken Down on Shoulder' },
+  { id: 'construction', label: 'Roadworks', icon: '🚧', color: '#f59e0b', desc: 'Active Resurfacing / Crew' },
+  { id: 'road_closure', label: 'Road Closed', icon: '⛔', color: '#b91c1c', desc: 'Complete Road Block / Detour' },
+  { id: 'lane_closure', label: 'Lane Closed', icon: '⚠️', color: '#f97316', desc: 'Right/Left Cones in Lane' },
+  { id: 'obstruction', label: 'Road Hazard', icon: '🪵', color: '#f59e0b', desc: 'Debris / Animal / Obstacle' },
+  { id: 'bad_weather', label: 'Flooding / Weather', icon: '🌊', color: '#0ea5e9', desc: 'Standing Water / Black Ice' }
 ];
 
 const HazardReport = ({

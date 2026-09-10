@@ -13,10 +13,18 @@ const HazardAlertSchema = new mongoose.Schema({
       'speed_camera_instant',
       'speed_camera_average',
       'obstruction',
+      'hazard_on_road',
       'road_closure',
       'lane_closure',
       'traffic_density',
-      'traffic_light'
+      'traffic_jam',
+      'traffic_light',
+      'accident',
+      'pothole',
+      'stopped_vehicle',
+      'construction',
+      'roadworks',
+      'bad_weather'
     ],
     required: true
   },
@@ -48,6 +56,9 @@ const HazardAlertSchema = new mongoose.Schema({
     type: String,
     enum: ['low', 'medium', 'high', 'critical'],
     default: 'medium'
+  },
+  speed_limit: {
+    type: Number
   },
   confirmations: [
     {

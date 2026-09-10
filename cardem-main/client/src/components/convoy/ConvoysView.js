@@ -10,8 +10,11 @@ import {
   getFriendDetails,
   clearFriendDetails
 } from '../../actions/profile';
+import { getRecentAlerts } from '../../actions/hazard';
 import FriendsDrawer from '../friends/FriendsDrawer';
 import FriendProfileModal from '../friends/FriendProfileModal';
+import { HAZARD_META } from '../alerts/AlertsFeed';
+import { calculateDistanceKm, formatDistance } from '../../utils/avatarPresets';
 
 const ConvoysView = () => {
   const dispatch = useDispatch();
@@ -20,10 +23,12 @@ const ConvoysView = () => {
   const auth = useSelector((state) => state.auth);
   const profileState = useSelector((state) => state.profile);
   const convoyState = useSelector((state) => state.convoy);
+  const hazardState = useSelector((state) => state.hazard);
 
   const { user } = auth;
   const { profile, friends, selectedFriend } = profileState;
   const { convoys } = convoyState;
+  const { alerts } = hazardState;
 
   const [coords, setCoords] = useState({ lat: 51.5074, lng: -0.1278 });
   const [gpsLocked, setGpsLocked] = useState(false);
@@ -36,6 +41,7 @@ const ConvoysView = () => {
   const mapInstanceRef = useRef(null);
   const userMarkerRef = useRef(null);
   const convoyMarkersRef = useRef({});
+  const alertMarkersRef = useRef({});
   const watchIdRef = useRef(null);
 
   // Safe Leaflet Loader
@@ -43,11 +49,12 @@ const ConvoysView = () => {
     return window.L;
   }, []);
 
-  // Fetch initial profile, friends, and active convoys
+  // Fetch initial profile, friends, active convoys, and road alerts
   useEffect(() => {
     dispatch(getCurrentProfile());
     dispatch(getFriends());
     dispatch(getActiveConvoys());
+    dispatch(getRecentAlerts());
   }, [dispatch]);
 
   // High-precision live geolocation listener
@@ -207,6 +214,82 @@ const ConvoysView = () => {
       }
     });
   }, [convoys, getLeaflet]);
+
+  // Render road hazard alert mini logos on the convoy map
+  useEffect(() => {
+    const L = getLeaflet();
+    const map = mapInstanceRef.current;
+    if (!L || !map) return;
+
+    // Remove old alert markers
+    Object.keys(alertMarkersRef.current).forEach((aid) => {
+      if (!alerts.some((a) => a._id === aid)) {
+        map.removeLayer(alertMarkersRef.current[aid]);
+        delete alertMarkersRef.current[aid];
+      }
+    });
+
+    // Plot active alerts
+    alerts.forEach((alert) => {
+      const c = alert.location?.coordinates;
+      if (!c || c.length !== 2) return;
+      const alertLng = c[0];
+      const alertLat = c[1];
+
+      const meta = HAZARD_META[alert.alert_type] || {
+        icon: '⚠️',
+        label: alert.alert_type.replace(/_/g, ' '),
+        color: '#f59e0b'
+      };
+
+      const dist = calculateDistanceKm(coords.lat, coords.lng, alertLat, alertLng);
+      const distFormatted = formatDistance(dist);
+
+      if (!alertMarkersRef.current[alert._id]) {
+        const miniIcon = L.divIcon({
+          className: 'alert-leaflet-icon-container',
+          html: `
+            <div class="alert-mini-logo-wrapper" style="--accent-color: ${meta.color};">
+              <div class="alert-mini-logo-badge">
+                <span class="mini-logo-emoji">${meta.icon}</span>
+              </div>
+              <div class="alert-mini-logo-pulse"></div>
+            </div>
+          `,
+          iconSize: [34, 34],
+          iconAnchor: [17, 17],
+          popupAnchor: [0, -18]
+        });
+
+        const marker = L.marker([alertLat, alertLng], { icon: miniIcon }).addTo(map);
+        marker.bindPopup(`
+          <div class="hud-leaflet-alert-popup">
+            <div class="popup-header">
+              <span class="popup-icon" style="background: ${meta.color}25; color: ${meta.color};">${meta.icon}</span>
+              <div class="popup-header-info">
+                <span class="popup-category" style="color: ${meta.color};">${meta.label.toUpperCase()}</span>
+                <h4 class="popup-title">${alert.title || meta.label}</h4>
+              </div>
+            </div>
+            <div class="popup-distance-pill">
+              <span>📍 <strong>${distFormatted}</strong></span>
+            </div>
+            ${alert.road_name ? `<div class="popup-road"><i class="fa-solid fa-road"></i> ${alert.road_name}</div>` : ''}
+            ${alert.description ? `<p class="popup-desc">${alert.description}</p>` : ''}
+            <div style="margin-top: 8px;">
+              <a href="/alerts" style="display: inline-block; padding: 4px 10px; background: #00f2fe; color: #000; border-radius: 4px; font-weight: 700; text-decoration: none; font-size: 11px;">
+                Open in Alerts Feed &rarr;
+              </a>
+            </div>
+          </div>
+        `, { className: 'cardem-custom-popup', maxWidth: 280 });
+
+        alertMarkersRef.current[alert._id] = marker;
+      } else {
+        alertMarkersRef.current[alert._id].setLatLng([alertLat, alertLng]);
+      }
+    });
+  }, [alerts, coords.lat, coords.lng, getLeaflet]);
 
   // Center on current location
   const handleRecenter = () => {

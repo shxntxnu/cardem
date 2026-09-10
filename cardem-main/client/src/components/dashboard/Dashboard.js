@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getCurrentProfile } from '../../actions/profile';
 import { getActiveConvoys, joinConvoyByCode } from '../../actions/convoy';
 import { getMyStats } from '../../actions/stats';
+import EditAccountModal from '../profile/EditAccountModal';
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -15,11 +16,12 @@ const Dashboard = () => {
   const statsState = useSelector((state) => state.stats);
 
   const { user } = auth;
-  const { profile, loading: profileLoading } = profileState;
-  const { convoys, activeConvoy } = convoyState;
+  const { profile } = profileState;
+  const { convoys } = convoyState;
   const { myStats } = statsState;
 
   const [joinCodeInput, setJoinCodeInput] = useState('');
+  const [showEditAccountModal, setShowEditAccountModal] = useState(false);
 
   useEffect(() => {
     dispatch(getCurrentProfile());
@@ -53,8 +55,17 @@ const Dashboard = () => {
           </div>
 
           <div className="driver-identity-info">
-            <div className="driver-callsign">
-              {profile?.handle ? `@${profile.handle}` : user?.name}
+            <div className="driver-identity-header">
+              <div className="driver-callsign">
+                {profile?.handle ? `@${profile.handle}` : user?.name}
+              </div>
+              <button
+                className="btn btn-hud-action btn-sm btn-edit-account"
+                onClick={() => setShowEditAccountModal(true)}
+                title="Edit Profile & Account"
+              >
+                <i className="fa-solid fa-gear text-cyan"></i> Edit Profile
+              </button>
             </div>
             <h1 className="driver-fullname">{user?.name}</h1>
             <div className="driver-tags">
@@ -266,6 +277,12 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Edit Profile & Account Modal */}
+      <EditAccountModal
+        isOpen={showEditAccountModal}
+        onClose={() => setShowEditAccountModal(false)}
+      />
     </div>
   );
 };

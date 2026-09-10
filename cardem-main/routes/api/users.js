@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('config');
 const { check, validationResult } = require('express-validator');
+const auth = require('../../middleware/auth');
 
 const User = require('../../models/User');
 const Profile = require('../../models/Profile');
@@ -28,10 +29,21 @@ router.post(
     const { name, email, password } = req.body;
 
     try {
-      // Check if user already exists
-      let user = await User.findOne({ email });
-      if (user) {
-        return res.status(400).json({ errors: [{ msg: 'User already exists' }] });
+      const cleanName = name.trim();
+      const escapedName = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      // Check if username is already taken by another user (case-insensitive)
+      let userByName = await User.findOne({
+        name: { $regex: new RegExp(`^${escapedName}$`, 'i') }
+      });
+      if (userByName) {
+        return res.status(400).json({ errors: [{ msg: 'Username is already taken by another driver' }] });
+      }
+
+      // Check if email already exists
+      let userByEmail = await User.findOne({ email });
+      if (userByEmail) {
+        return res.status(400).json({ errors: [{ msg: 'An account with this email already exists' }] });
       }
 
       // Gravatar default avatar derivation
@@ -41,8 +53,8 @@ router.post(
         d: 'retro'
       });
 
-      user = new User({
-        name,
+      const user = new User({
+        name: cleanName,
         email,
         avatar,
         password
@@ -98,4 +110,101 @@ router.post(
   }
 );
 
+// @route    PUT api/users/profile
+// @desc     Update logged in user's profile: username, password, avatar preset, driving style & bio
+// @access   Private
+router.put('/profile', auth, async (req, res) => {
+  const {
+    name,
+    avatar,
+    currentPassword,
+    newPassword,
+    driving_style,
+    experience_level,
+    bio
+  } = req.body;
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // 1. Handle Username Change with Strict Uniqueness Check
+    if (name && name.trim() && name.trim() !== user.name) {
+      const cleanName = name.trim();
+      if (cleanName.length < 2) {
+        return res.status(400).json({ errors: [{ msg: 'Username must be at least 2 characters' }] });
+      }
+
+      const escapedName = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const existingUser = await User.findOne({
+        name: { $regex: new RegExp(`^${escapedName}$`, 'i') },
+        _id: { $ne: req.user.id }
+      });
+
+      if (existingUser) {
+        return res.status(400).json({ errors: [{ msg: 'Username is already taken by another driver' }] });
+      }
+
+      user.name = cleanName;
+    }
+
+    // 2. Handle Password Change (Current password verified + New password validated)
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ errors: [{ msg: 'Current password is required to set a new password' }] });
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ errors: [{ msg: 'Current password is incorrect' }] });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ errors: [{ msg: 'New password must be at least 6 characters' }] });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(newPassword, salt);
+    }
+
+    // 3. Handle Preset Avatar Update (Safe Preset badges only - no photo uploads)
+    if (avatar && typeof avatar === 'string') {
+      user.avatar = avatar;
+    }
+
+    await user.save();
+
+    // 4. Synchronize Profile handle and details
+    let profile = await Profile.findOne({ user: req.user.id });
+    if (profile) {
+      profile.handle = user.name;
+      if (driving_style) profile.driving_style = driving_style;
+      if (experience_level) profile.experience_level = experience_level;
+      if (bio !== undefined) profile.bio = bio;
+      await profile.save();
+    }
+
+    // Return sanitized user and updated profile
+    const sanitizedUser = {
+      _id: user._id,
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      date: user.date
+    };
+
+    res.json({
+      user: sanitizedUser,
+      profile
+    });
+  } catch (err) {
+    console.error('Error updating user profile:', err.message);
+    res.status(500).send('Server error');
+  }
+});
+
 module.exports = router;
+

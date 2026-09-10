@@ -30,14 +30,34 @@ export const getNearbyAlerts = (lat, lng, radius = 15000) => async (dispatch) =>
 };
 
 // Get recent alerts
-export const getRecentAlerts = () => async (dispatch) => {
+export const getRecentAlerts = (coords) => async (dispatch) => {
   try {
-    const res = await api.get('/alerts/recent');
+    const url = coords && coords.lat && coords.lng
+      ? `/alerts/recent?lat=${coords.lat}&lng=${coords.lng}`
+      : '/alerts/recent';
+    const res = await api.get(url);
 
     dispatch({
       type: GET_RECENT_ALERTS,
       payload: res.data
     });
+  } catch (err) {
+    dispatch({
+      type: ALERT_ERROR,
+      payload: { msg: err.response?.statusText }
+    });
+  }
+};
+
+// Seed realistic Waze/Google Maps alerts around user's location
+export const seedSampleAlerts = (coords) => async (dispatch) => {
+  try {
+    const res = await api.post('/alerts/seed', coords || {});
+    dispatch({
+      type: GET_RECENT_ALERTS,
+      payload: res.data
+    });
+    dispatch(setAlert('Waze-style driver alerts seeded successfully!', 'success'));
   } catch (err) {
     dispatch({
       type: ALERT_ERROR,
