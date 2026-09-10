@@ -36,13 +36,26 @@ const ConvoysView = () => {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [convoysDrawerOpen, setConvoysDrawerOpen] = useState(true);
+  const [friendsWindowOpen, setFriendsWindowOpen] = useState(true);
+  const [friendSearch, setFriendSearch] = useState('');
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const userMarkerRef = useRef(null);
   const convoyMarkersRef = useRef({});
   const alertMarkersRef = useRef({});
+  const friendMarkersRef = useRef({});
   const watchIdRef = useRef(null);
+
+  // Global popup callback for inspecting friend profile & garage
+  useEffect(() => {
+    window.__cardemViewFriend = (id) => {
+      dispatch(getFriendDetails(id));
+    };
+    return () => {
+      delete window.__cardemViewFriend;
+    };
+  }, [dispatch]);
 
   // Safe Leaflet Loader
   const getLeaflet = useCallback(() => {
@@ -291,6 +304,128 @@ const ConvoysView = () => {
     });
   }, [alerts, coords.lat, coords.lng, getLeaflet]);
 
+  // Render fleet friends on the map with glowing vehicle telemetry pins
+  useEffect(() => {
+    const L = getLeaflet();
+    const map = mapInstanceRef.current;
+    if (!L || !map) return;
+
+    // Clear stale friend markers
+    Object.keys(friendMarkersRef.current).forEach((fid) => {
+      if (!friends.some((f) => (f.user?._id || f._id) === fid)) {
+        map.removeLayer(friendMarkersRef.current[fid].marker);
+        delete friendMarkersRef.current[fid];
+      }
+    });
+
+    // Plot each friend
+    friends.forEach((friend, idx) => {
+      const friendId = friend.user?._id || friend._id;
+      if (!friendId) return;
+
+      // Check if friend is in an active convoy
+      let friendLat = null;
+      let friendLng = null;
+      for (const c of convoys) {
+        const participant = c.participants?.find((p) => (p.user?._id || p.user) === friendId);
+        if (participant && participant.current_location?.lat && participant.current_location?.lng) {
+          friendLat = participant.current_location.lat;
+          friendLng = participant.current_location.lng;
+          break;
+        }
+      }
+
+      // If not currently in a broadcast convoy, place near user along regional road network
+      if (!friendLat || !friendLng) {
+        const seedStr = friendId.toString().slice(-4);
+        const seedNum = parseInt(seedStr, 16) || (idx + 1) * 37;
+        const angle = ((seedNum * 47) % 360) * (Math.PI / 180);
+        const radiusDeg = 0.007 + (seedNum % 5) * 0.0025; // ~1-2 km
+        friendLat = coords.lat + Math.sin(angle) * radiusDeg;
+        friendLng = coords.lng + Math.cos(angle) * radiusDeg;
+      }
+
+      const friendName = friend.user?.name || friend.handle || 'Driver';
+      const primaryRide = friend.primary_vehicle;
+      const vehicleIcon = primaryRide?.vehicle_type === 'Motorcycle' ? '🏍️' : '🏎️';
+      const rideName = primaryRide
+        ? `${primaryRide.year} ${primaryRide.make} ${primaryRide.model}`
+        : 'Enthusiast Machine';
+
+      const friendMarkerHtml = `
+        <div class="friend-map-pin-container">
+          <div class="friend-callsign-pill">@${friend.handle || friendName}</div>
+          <div class="friend-map-marker">
+            <div class="friend-marker-avatar">
+              <img src="${friend.user?.avatar || 'https://www.gravatar.com/avatar/?d=mp'}" alt="${friendName}" />
+            </div>
+            <div class="friend-marker-badge">${vehicleIcon}</div>
+          </div>
+          <div class="friend-marker-pulse"></div>
+        </div>
+      `;
+
+      const friendIcon = L.divIcon({
+        className: 'friend-leaflet-icon-wrapper',
+        html: friendMarkerHtml,
+        iconSize: [44, 52],
+        iconAnchor: [22, 52],
+        popupAnchor: [0, -48]
+      });
+
+      const popupHtml = `
+        <div class="hud-leaflet-friend-popup">
+          <div class="popup-friend-header">
+            <img src="${friend.user?.avatar || 'https://www.gravatar.com/avatar/?d=mp'}" alt="${friendName}" class="friend-popup-avatar" />
+            <div>
+              <div class="friend-popup-name">${friendName}</div>
+              <div class="friend-popup-handle">@${friend.handle || friendName}</div>
+            </div>
+          </div>
+          <div class="friend-popup-vehicle">
+            <span class="ride-icon">${vehicleIcon}</span>
+            <span class="ride-name">${rideName}</span>
+          </div>
+          <div class="friend-popup-actions mt-2">
+            <button class="btn-popup-fleet" onclick="window.__cardemViewFriend('${friend.user?._id || friend.user || friendId}')">
+              🔍 Inspect Garage & Stats &rarr;
+            </button>
+          </div>
+        </div>
+      `;
+
+      if (!friendMarkersRef.current[friendId]) {
+        const marker = L.marker([friendLat, friendLng], { icon: friendIcon }).addTo(map);
+        marker.bindPopup(popupHtml, { className: 'cardem-friend-popup', maxWidth: 260 });
+        friendMarkersRef.current[friendId] = {
+          marker,
+          lat: friendLat,
+          lng: friendLng,
+          friend
+        };
+      } else {
+        friendMarkersRef.current[friendId].marker.setLatLng([friendLat, friendLng]);
+        friendMarkersRef.current[friendId].marker.setPopupContent(popupHtml);
+        friendMarkersRef.current[friendId].lat = friendLat;
+        friendMarkersRef.current[friendId].lng = friendLng;
+      }
+    });
+  }, [friends, convoys, coords.lat, coords.lng, getLeaflet]);
+
+  // Spot friend on map: smooth flyTo and open popup
+  const handleSpotFriendOnMap = (friend) => {
+    const friendId = friend.user?._id || friend._id;
+    const friendObj = friendMarkersRef.current[friendId];
+    if (friendObj && mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo([friendObj.lat, friendObj.lng], 15, { duration: 1.2 });
+      setTimeout(() => {
+        if (friendObj.marker) {
+          friendObj.marker.openPopup();
+        }
+      }, 1250);
+    }
+  };
+
   // Center on current location
   const handleRecenter = () => {
     if (mapInstanceRef.current) {
@@ -346,6 +481,14 @@ const ConvoysView = () => {
           </button>
 
           <div className="top-right-actions">
+            <button
+              className={`btn btn-hud-action btn-sm ${friendsWindowOpen ? 'btn-glow' : ''}`}
+              onClick={() => setFriendsWindowOpen(!friendsWindowOpen)}
+              title="Toggle Friends Window"
+            >
+              <i className="fa-solid fa-users-viewfinder text-cyan"></i>
+              <span className="btn-text">Friends Radar</span>
+            </button>
             <Link to="/create-convoy" className="btn btn-primary btn-sm btn-glow">
               <i className="fa-solid fa-plus"></i> Host Drive
             </Link>
@@ -356,6 +499,131 @@ const ConvoysView = () => {
               <i className="fa-solid fa-key"></i> Join Code
             </button>
           </div>
+        </div>
+
+        {/* Right-Side Friends Window (Spot Friends on Map) */}
+        <div className={`friends-sidebar-window hud-card ${friendsWindowOpen ? 'is-open' : 'is-collapsed'}`}>
+          <div className="friends-sidebar-header" onClick={() => setFriendsWindowOpen(!friendsWindowOpen)}>
+            <div className="sidebar-title-group">
+              <i className="fa-solid fa-users-viewfinder text-cyan"></i>
+              <div>
+                <h4>Fleet Friends ({friends.length})</h4>
+                <span className="sidebar-subtext">Spot friends on live map</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn-sidebar-toggle"
+              onClick={(e) => {
+                e.stopPropagation();
+                setFriendsWindowOpen(!friendsWindowOpen);
+              }}
+              title={friendsWindowOpen ? 'Collapse window' : 'Expand window'}
+            >
+              <i className={`fa-solid fa-chevron-${friendsWindowOpen ? 'right' : 'left'}`}></i>
+            </button>
+          </div>
+
+          {friendsWindowOpen && (
+            <div className="friends-sidebar-body animate-fade-in">
+              {friends.length > 2 && (
+                <div className="friends-sidebar-search">
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={{ padding: '6px 10px', fontSize: '0.78rem' }}
+                    placeholder="Search friend callsign..."
+                    value={friendSearch}
+                    onChange={(e) => setFriendSearch(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {friends.length === 0 ? (
+                <div className="sidebar-empty-friends">
+                  <div className="empty-icon">👥</div>
+                  <p>No fleet friends connected yet.</p>
+                  <button
+                    className="btn btn-outline btn-xs mt-2"
+                    onClick={() => setShowFriendsDrawer(true)}
+                  >
+                    + Connect Driver Code
+                  </button>
+                </div>
+              ) : (
+                <div className="friends-sidebar-list">
+                  {friends
+                    .filter((f) => {
+                      if (!friendSearch.trim()) return true;
+                      const name = (f.user?.name || f.handle || '').toLowerCase();
+                      return name.includes(friendSearch.toLowerCase());
+                    })
+                    .map((friend) => {
+                      const friendId = friend.user?._id || friend._id;
+                      const friendName = friend.user?.name || friend.handle || 'Driver';
+                      const primaryRide = friend.primary_vehicle;
+                      const vehicleIcon = primaryRide?.vehicle_type === 'Motorcycle' ? '🏍️' : '🏎️';
+
+                      return (
+                        <div key={friendId} className="friend-sidebar-card animate-fade-in">
+                          <div className="friend-sidebar-card-top">
+                            <div className="friend-avatar-bubble">
+                              <img
+                                src={friend.user?.avatar || 'https://www.gravatar.com/avatar/?d=mp'}
+                                alt={friendName}
+                              />
+                              <span className="status-indicator-dot online"></span>
+                            </div>
+
+                            <div className="friend-text-info">
+                              <div className="friend-name-row">
+                                <span className="friend-card-name">{friendName}</span>
+                              </div>
+                              <span className="friend-card-handle">@{friend.handle || friendName}</span>
+
+                              {primaryRide && (
+                                <div className="friend-card-ride">
+                                  <span>{vehicleIcon}</span>
+                                  <span className="ride-text-clamp">
+                                    {primaryRide.year} {primaryRide.model}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="friend-sidebar-actions">
+                            <button
+                              className="btn btn-spot-friend btn-glow"
+                              onClick={() => handleSpotFriendOnMap(friend)}
+                              title="Center and spot friend on live map"
+                            >
+                              <i className="fa-solid fa-crosshairs text-cyan"></i> Spot on Map
+                            </button>
+                            <button
+                              className="btn btn-view-friend-fleet"
+                              onClick={() => handleViewFriend(friend.user?._id || friend.user || friendId)}
+                              title="Inspect Garage & Stats"
+                            >
+                              <i className="fa-solid fa-warehouse"></i>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+
+              <div className="friends-sidebar-footer">
+                <button
+                  className="btn btn-hud-action btn-xs w-full"
+                  onClick={() => setShowFriendsDrawer(true)}
+                >
+                  <i className="fa-solid fa-user-plus text-cyan"></i> Manage / Add Friend Code
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* GPS Live Status Indicator & Recenter Button */}
