@@ -29,7 +29,8 @@ router.post(
     const { name, email, password } = req.body;
 
     try {
-      const cleanName = name.trim();
+      const cleanName = (name || '').trim();
+      const cleanEmail = (email || '').toLowerCase().trim();
       const escapedName = cleanName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
       // Check if username is already taken by another user (case-insensitive)
@@ -41,13 +42,13 @@ router.post(
       }
 
       // Check if email already exists
-      let userByEmail = await User.findOne({ email });
+      let userByEmail = await User.findOne({ email: cleanEmail });
       if (userByEmail) {
         return res.status(400).json({ errors: [{ msg: 'An account with this email already exists' }] });
       }
 
       // Gravatar default avatar derivation
-      const avatar = gravatar.url(email, {
+      const avatar = gravatar.url(cleanEmail, {
         s: '200',
         r: 'pg',
         d: 'retro'
@@ -55,7 +56,7 @@ router.post(
 
       const user = new User({
         name: cleanName,
-        email,
+        email: cleanEmail,
         avatar,
         password
       });

@@ -107,10 +107,15 @@ export const joinConvoyByCode = (joinCode, navigate) => async (dispatch) => {
 // Leave convoy
 export const leaveConvoy = (convoyId, navigate) => async (dispatch) => {
   try {
-    await api.post(`/convoys/${convoyId}/leave`);
-
-    socketService.leaveConvoy(convoyId);
-
+    if (convoyId) {
+      await api.post(`/convoys/${convoyId}/leave`).catch((err) => {
+        console.warn('Backend leave convoy notice:', err.response?.data?.msg || err.message);
+      });
+      socketService.leaveConvoy(convoyId);
+    }
+  } catch (err) {
+    console.warn('Leave convoy error:', err);
+  } finally {
     dispatch({
       type: CONVOY_LEFT
     });
@@ -118,13 +123,8 @@ export const leaveConvoy = (convoyId, navigate) => async (dispatch) => {
     dispatch(setAlert('Left the convoy', 'info'));
 
     if (navigate) {
-      navigate('/dashboard');
+      navigate('/convoys');
     }
-  } catch (err) {
-    dispatch({
-      type: CONVOY_ERROR,
-      payload: { msg: err.response?.statusText }
-    });
   }
 };
 

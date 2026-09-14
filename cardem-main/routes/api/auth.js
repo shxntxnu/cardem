@@ -30,7 +30,7 @@ router.get('/', auth, async (req, res) => {
 router.post(
   '/',
   [
-    check('email', 'Please include a valid email').isEmail().normalizeEmail(),
+    check('email', 'Please enter your email or driver callsign').not().isEmpty().trim(),
     check('password', 'Password is required').exists()
   ],
   async (req, res) => {
@@ -42,8 +42,17 @@ router.post(
     const { email, password } = req.body;
 
     try {
-      // Find user by normalized email
-      const user = await User.findOne({ email });
+      const cleanInput = (email || '').trim();
+      const escapedInput = cleanInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      // Find user by normalized email (case-insensitive) OR driver callsign/username (case-insensitive)
+      const user = await User.findOne({
+        $or: [
+          { email: cleanInput.toLowerCase() },
+          { name: { $regex: new RegExp(`^${escapedInput}$`, 'i') } }
+        ]
+      });
+
       if (!user) {
         return res.status(400).json({ errors: [{ msg: 'Invalid Credentials' }] });
       }

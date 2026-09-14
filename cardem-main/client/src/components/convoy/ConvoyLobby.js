@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { getConvoy, leaveConvoy, updateConvoyStatus } from '../../actions/convoy';
@@ -9,20 +9,23 @@ const ConvoyLobby = ({
   getConvoy,
   leaveConvoy,
   updateConvoyStatus,
-  convoy: { convoy, loading },
+  convoy: { activeConvoy, convoy, loading, error },
   auth: { user }
 }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
 
+  const currentConvoy = convoy || activeConvoy;
+
   useEffect(() => {
     getConvoy(id);
 
     // Join Socket room for real-time lobby updates
-    if (user && user._id) {
+    const userId = user?._id || user?.id;
+    if (userId) {
       socketService.joinConvoy(id, {
-        _id: user._id,
+        _id: userId,
         name: user.name,
         avatar: user.avatar
       });
@@ -33,7 +36,27 @@ const ConvoyLobby = ({
     };
   }, [getConvoy, id, user]);
 
-  if (loading || !convoy) {
+  if (!loading && !currentConvoy) {
+    return (
+      <div className="lobby-container animate-fade-in">
+        <div className="hud-card loading-card">
+          <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: '2.5rem', color: '#ff4757', marginBottom: '1rem' }}></i>
+          <h2>Convoy Unavailable</h2>
+          <p>{error?.msg || 'Could not connect to this convoy. It may have ended or the link is invalid.'}</p>
+          <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <button className="btn btn-secondary" onClick={() => getConvoy(id)}>
+              Retry Connection
+            </button>
+            <button className="btn btn-primary" onClick={() => navigate('/convoys')}>
+              Back to Convoys
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading || !currentConvoy) {
     return (
       <div className="lobby-container">
         <div className="hud-card loading-card">
@@ -44,20 +67,25 @@ const ConvoyLobby = ({
     );
   }
 
-  const isHost = user && convoy.host && (convoy.host._id === user._id || convoy.host === user._id);
-  const participants = convoy.participants || [];
+  const currentUserId = (user?._id || user?.id)?.toString();
+  const hostId = (currentConvoy.host?._id || currentConvoy.host?.id || currentConvoy.host)?.toString();
+  const isHost = Boolean(currentUserId && hostId && currentUserId === hostId);
+  const participants = currentConvoy.participants || [];
+  const destinationName = currentConvoy.destination_name || currentConvoy.destination?.name;
 
   const copyCode = () => {
-    if (convoy.join_code) {
-      navigator.clipboard.writeText(convoy.join_code);
+    if (currentConvoy.join_code) {
+      navigator.clipboard.writeText(currentConvoy.join_code);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  const handleStartDrive = () => {
-    updateConvoyStatus(id, 'in_progress');
-    navigate(`/convoy/${id}/drive`);
+  const handleStartDrive = (autoStart = false) => {
+    updateConvoyStatus(id, 'active');
+    navigate(`/convoy/${id}/drive`, {
+      state: { autoStartNav: autoStart, returnTo: `/convoy/${id}` }
+    });
   };
 
   const handleEndDrive = () => {
@@ -73,47 +101,110 @@ const ConvoyLobby = ({
       {/* Convoy Hero Card */}
       <div className="hud-card lobby-header-card">
         <div className="lobby-status-bar">
-          <span className={`status-tag status-${convoy.status}`}>
-            ● {convoy.status.toUpperCase().replace('_', ' ')}
+          <span className={`status-tag status-${currentConvoy.status || 'active'}`}>
+            ● {(currentConvoy.status || 'active').toUpperCase().replace('_', ' ')}
           </span>
           <span className="radio-tag">
-            📻 Walkie Channel: <strong>{convoy.radio_channel || 'General'}</strong>
+            📻 Walkie Channel: <strong>{currentConvoy.radio_channel || 'General'}</strong>
           </span>
         </div>
 
-        <h1 className="lobby-title">{convoy.name}</h1>
-        {convoy.description && <p className="lobby-desc">{convoy.description}</p>}
+        <h1 className="lobby-title">{currentConvoy.name}</h1>
+        {currentConvoy.description && <p className="lobby-desc">{currentConvoy.description}</p>}
 
         {/* Join Code Callout */}
         <div className="join-code-banner">
           <span className="join-code-label">SHARE CODE TO INVITE DRIVERS</span>
           <div className="code-display" onClick={copyCode} title="Click to copy">
-            <span className="code-text">{convoy.join_code}</span>
+            <span className="code-text">{currentConvoy.join_code}</span>
             <button className="copy-btn">{copied ? '✓ COPIED' : '📋 COPY'}</button>
           </div>
         </div>
 
-        {/* Destination & Route Specs */}
-        {convoy.destination && convoy.destination.name && (
-          <div className="destination-badge">
-            <span className="dest-icon">📍 Destination:</span>
-            <span className="dest-name">{convoy.destination.name}</span>
+        {/* Convoy Route Itinerary & Planned Stops List before accepting route */}
+        <div className="lobby-route-section">
+          <div className="lobby-route-header-strip">
+            <div className="planner-title-group">
+              <span className="badge-corridor">🗺️ CONVOY ROUTE ITINERARY</span>
+              <span className="stops-count-tag">
+                {currentConvoy.waypoints?.length > 0
+                  ? `${currentConvoy.waypoints.length} ${currentConvoy.waypoints.length === 1 ? 'Stop' : 'Stops'}`
+                  : destinationName
+                  ? '1 Stop'
+                  : '0 Stops'}
+              </span>
+            </div>
+            <span className={`badge-role ${currentConvoy.is_route_finalised ? 'role-finalised' : 'role-host'}`}>
+              {currentConvoy.is_route_finalised ? '✅ Sequence Finalised' : '⏳ Sequence In Planning'}
+            </span>
           </div>
-        )}
+
+          {currentConvoy.waypoints && currentConvoy.waypoints.length > 0 ? (
+            <div className="lobby-waypoints-list">
+              {currentConvoy.waypoints.map((wp, idx) => {
+                const isFinal = idx === currentConvoy.waypoints.length - 1;
+                return (
+                  <div key={wp._id || wp.id || idx} className={`lobby-waypoint-item ${isFinal ? 'is-final-item' : ''}`}>
+                    <div className="waypoint-num-badge">
+                      {isFinal && currentConvoy.waypoints.length > 1 ? '🏁' : idx + 1}
+                    </div>
+                    <div className="waypoint-meta">
+                      <strong className="wp-name">{wp.name}</strong>
+                      {wp.display_name && <span className="wp-sub">{wp.display_name}</span>}
+                    </div>
+                    <span className="waypoint-step-tag">
+                      {idx === 0 ? '🏁 Stop 1 (Start)' : isFinal ? '🏆 Final Destination' : `📍 Stop ${idx + 1}`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : destinationName ? (
+            <div className="lobby-waypoints-list">
+              <div className="lobby-waypoint-item is-final-item">
+                <div className="waypoint-num-badge">🏁</div>
+                <div className="waypoint-meta">
+                  <strong className="wp-name">{destinationName}</strong>
+                  <span className="wp-sub">Designated Convoy Destination</span>
+                </div>
+                <span className="waypoint-step-tag">🏆 Final Destination</span>
+              </div>
+            </div>
+          ) : (
+            <div className="empty-itinerary-banner">
+              <span>📍 No route stops configured yet. The host can choose destinations on the live map.</span>
+            </div>
+          )}
+        </div>
 
         {/* Action Controls */}
         <div className="lobby-actions">
-          <Link to={`/convoy/${id}/drive`} className="btn btn-primary btn-glow btn-lg">
-            🛰️ ENTER LIVE MAP HUD
-          </Link>
-
-          {isHost && convoy.status === 'forming' && (
-            <button className="btn btn-success btn-lg" onClick={handleStartDrive}>
-              🟢 START CONVOY DRIVE
+          {currentConvoy.waypoints?.length > 0 || destinationName ? (
+            <>
+              <button
+                className="btn btn-primary btn-glow btn-lg btn-accept-route"
+                onClick={() => handleStartDrive(true)}
+                id="btn-accept-route-nav"
+              >
+                🚀 ACCEPT ROUTE & BEGIN NAVIGATION
+              </button>
+              <button
+                className="btn btn-secondary-ghost"
+                onClick={() => handleStartDrive(false)}
+              >
+                🛰️ View Map Only
+              </button>
+            </>
+          ) : (
+            <button
+              className="btn btn-primary btn-glow btn-lg"
+              onClick={() => handleStartDrive(false)}
+            >
+              🛰️ {isHost ? 'ENTER MAP TO SET ROUTE' : 'ENTER LIVE MAP HUD'}
             </button>
           )}
 
-          {isHost && convoy.status === 'in_progress' && (
+          {isHost && currentConvoy.status !== 'completed' && (
             <button className="btn btn-warning" onClick={handleEndDrive}>
               🏁 COMPLETE DRIVE SESSION
             </button>
@@ -128,7 +219,7 @@ const ConvoyLobby = ({
       {/* Participant Fleet Roster */}
       <div className="roster-section mt-6">
         <div className="roster-header">
-          <h2>Convoy Roster ({participants.length}/{convoy.max_participants})</h2>
+          <h2>Convoy Roster ({participants.length}/{currentConvoy.max_participants || 20})</h2>
           <span className="live-indicator">LIVE TELEMETRY ACTIVE</span>
         </div>
 
@@ -136,6 +227,7 @@ const ConvoyLobby = ({
           {participants.map((p, idx) => {
             const driver = p.user;
             const vehicle = p.vehicle;
+            const isParticipantHost = hostId && (driver?._id || driver?.id || driver)?.toString() === hostId;
             return (
               <div key={idx} className="participant-card hud-card">
                 <div className="participant-avatar-wrap">
@@ -146,7 +238,7 @@ const ConvoyLobby = ({
                       {driver?.name ? driver.name[0].toUpperCase() : 'D'}
                     </div>
                   )}
-                  {driver?._id === convoy.host?._id && (
+                  {isParticipantHost && (
                     <span className="host-badge" title="Convoy Host">👑</span>
                   )}
                 </div>

@@ -25,7 +25,7 @@ const Register = () => {
     if (password !== confirmPassword) {
       dispatch(setAlert('Passwords do not match', 'danger'));
     } else {
-      dispatch(register({ name, email, password }));
+      dispatch(register({ name: name.trim(), email: email.trim(), password }));
     }
   };
 

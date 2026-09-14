@@ -10,22 +10,34 @@ class AudioService {
   }
 
   // Initialize non-exclusive WebAudio context that mixes over background car music
+  init() {
+    this.initContext();
+  }
+
   initContext() {
-    if (!this.audioCtx) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioContextClass) {
-        this.audioCtx = new AudioContextClass({ latencyHint: 'interactive' });
-        this.gainNode = this.audioCtx.createGain();
-        this.gainNode.gain.value = 0.8;
-        this.gainNode.connect(this.audioCtx.destination);
+    try {
+      if (!this.audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          this.audioCtx = new AudioContextClass({ latencyHint: 'interactive' });
+          this.gainNode = this.audioCtx.createGain();
+          this.gainNode.gain.value = 0.8;
+          this.gainNode.connect(this.audioCtx.destination);
+        }
       }
-    }
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
+      if (this.audioCtx && this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume();
+      }
+    } catch (err) {
+      console.warn('Web Audio initialization error:', err);
     }
   }
 
   // Realistic Walkie-Talkie Radio Squelch Tone (Opening chirp)
+  playSquelchOpen() {
+    this.playMicOpenSquelch();
+  }
+
   playMicOpenSquelch() {
     this.initContext();
     if (!this.audioCtx) return;
@@ -53,6 +65,10 @@ class AudioService {
   }
 
   // Walkie-Talkie Radio Roger / Squelch Close Chirp
+  playSquelchClose() {
+    this.playMicCloseSquelch();
+  }
+
   playMicCloseSquelch() {
     this.initContext();
     if (!this.audioCtx) return;

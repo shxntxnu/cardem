@@ -9,7 +9,8 @@ const WalkieTalkie = ({
   convoyId,
   user,
   convoy: { pttActive, activeSpeaker },
-  setPTTActive
+  setPTTActive,
+  position = 'center'
 }) => {
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [audioError, setAudioError] = useState(null);
@@ -132,7 +133,7 @@ const WalkieTalkie = ({
   }, [startTalking, stopTalking]);
 
   return (
-    <div className="walkie-dock">
+    <div className={`walkie-dock ${position === 'right' ? 'dock-right' : ''}`}>
       {/* Active speaker alert banner */}
       {activeSpeaker && activeSpeaker.userId !== user?._id && (
         <div className="active-speaker-banner animate-pulse">
@@ -197,7 +198,8 @@ WalkieTalkie.propTypes = {
   convoyId: PropTypes.string.isRequired,
   user: PropTypes.object,
   convoy: PropTypes.object.isRequired,
-  setPTTActive: PropTypes.func.isRequired
+  setPTTActive: PropTypes.func.isRequired,
+  position: PropTypes.string
 };
 
 const mapStateToProps = (state) => ({

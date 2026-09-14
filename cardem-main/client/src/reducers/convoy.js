@@ -19,6 +19,7 @@ import {
 const initialState = {
   convoys: [],
   activeConvoy: null,
+  convoy: null,
   myTelemetry: {
     lat: 0,
     lng: 0,
@@ -49,6 +50,7 @@ export default function convoyReducer(state = initialState, action) {
       return {
         ...state,
         activeConvoy: payload,
+        convoy: payload,
         loading: false
       };
     case TELEMETRY_UPDATED:
@@ -84,39 +86,48 @@ export default function convoyReducer(state = initialState, action) {
         });
       }
 
+      const updatedConvoy = {
+        ...state.activeConvoy,
+        participants: updatedParticipants
+      };
+
       return {
         ...state,
-        activeConvoy: {
-          ...state.activeConvoy,
-          participants: updatedParticipants
-        }
+        activeConvoy: updatedConvoy,
+        convoy: updatedConvoy
       };
     }
     case DRIVER_JOINED_CONVOY: {
       if (!state.activeConvoy) return state;
-      const exists = state.activeConvoy.participants.some(
+      const exists = (state.activeConvoy.participants || []).some(
         p => (p.user?._id || p.user) === (payload.user?.id || payload.user?._id)
       );
       if (exists) return state;
 
+      const updatedJoined = {
+        ...state.activeConvoy,
+        participants: [...(state.activeConvoy.participants || []), payload]
+      };
+
       return {
         ...state,
-        activeConvoy: {
-          ...state.activeConvoy,
-          participants: [...state.activeConvoy.participants, payload]
-        }
+        activeConvoy: updatedJoined,
+        convoy: updatedJoined
       };
     }
     case DRIVER_LEFT_CONVOY: {
       if (!state.activeConvoy) return state;
+      const updatedLeft = {
+        ...state.activeConvoy,
+        participants: (state.activeConvoy.participants || []).filter(
+          p => (p.user?._id || p.user) !== payload.userId
+        )
+      };
+
       return {
         ...state,
-        activeConvoy: {
-          ...state.activeConvoy,
-          participants: state.activeConvoy.participants.filter(
-            p => (p.user?._id || p.user) !== payload.userId
-          )
-        }
+        activeConvoy: updatedLeft,
+        convoy: updatedLeft
       };
     }
     case SET_PTT_ACTIVE:
@@ -139,6 +150,7 @@ export default function convoyReducer(state = initialState, action) {
       return {
         ...state,
         activeConvoy: null,
+        convoy: null,
         loading: false
       };
     case CONVOY_ERROR:

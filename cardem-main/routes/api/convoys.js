@@ -35,10 +35,38 @@ router.post(
     const {
       name,
       description,
-      destination_name,
-      destination_coordinates,
-      waypoints
+      destination_name: rawDestName,
+      destination_coordinates: rawDestCoords,
+      destination,
+      waypoints: rawWaypoints
     } = req.body;
+
+    const destination_name = rawDestName || destination?.name || '';
+    let destination_coordinates = rawDestCoords || null;
+    if (!destination_coordinates && destination?.coordinates && destination.coordinates.length === 2) {
+      destination_coordinates = {
+        lat: Number(destination.coordinates[1]),
+        lng: Number(destination.coordinates[0])
+      };
+    } else if (!destination_coordinates && req.body.destination_lat && req.body.destination_lng) {
+      destination_coordinates = {
+        lat: Number(req.body.destination_lat),
+        lng: Number(req.body.destination_lng)
+      };
+    }
+
+    // If waypoints array is provided, use it; otherwise, if a destination was set, seed as stop 1
+    let waypoints = rawWaypoints;
+    if ((!waypoints || waypoints.length === 0) && destination_name && destination_coordinates) {
+      waypoints = [
+        {
+          name: destination_name,
+          lat: destination_coordinates.lat,
+          lng: destination_coordinates.lng,
+          order: 1
+        }
+      ];
+    }
 
     try {
       // Find host profile and active primary vehicle
@@ -69,6 +97,7 @@ router.post(
         destination_name: destination_name || '',
         destination_coordinates: destination_coordinates || null,
         waypoints: waypoints || [],
+        is_route_finalised: Boolean(waypoints && waypoints.length > 0),
         participants: [
           {
             user: req.user.id,
@@ -204,14 +233,29 @@ router.post('/:id/leave', [auth, checkObjectId('id')], async (req, res) => {
     const convoy = await Convoy.findById(req.params.id);
     if (!convoy) return res.status(404).json({ msg: 'Convoy not found' });
 
-    convoy.participants = convoy.participants.filter(
-      p => p.user.toString() !== req.user.id
-    );
+    // Safely remove participant regardless of whether user is ObjectId or populated object
+    convoy.participants = (convoy.participants || []).filter((p) => {
+      const pUserId = (p && p.user && (p.user._id || p.user)) ? (p.user._id || p.user).toString() : null;
+      return pUserId && pUserId !== req.user.id;
+    });
+
+    const isHost = convoy.host && (convoy.host._id || convoy.host).toString() === req.user.id;
+    if (isHost) {
+      if (convoy.participants.length > 0) {
+        // Transfer host leadership to the next remaining driver
+        const nextHost = convoy.participants[0].user;
+        convoy.host = nextHost._id || nextHost;
+      } else {
+        // No participants remain, conclude convoy session gracefully
+        convoy.status = 'completed';
+        convoy.ended_at = new Date();
+      }
+    }
 
     await convoy.save();
     res.json({ msg: 'Successfully left the convoy' });
   } catch (err) {
-    console.error(err.message);
+    console.error('Leave convoy error:', err);
     res.status(500).send('Server Error');
   }
 });
@@ -276,6 +320,95 @@ router.put('/:id/status', [auth, checkObjectId('id')], async (req, res) => {
     res.json(convoy);
   } catch (err) {
     console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route    PUT api/convoys/:id/destination
+// @desc     Update convoy destination and ordered waypoints for all members
+// @access   Private
+router.put('/:id/destination', [auth, checkObjectId('id')], async (req, res) => {
+  const { destination_name, destination_coordinates, coordinates, waypoints, is_route_finalised } = req.body;
+
+  try {
+    const convoy = await Convoy.findById(req.params.id);
+    if (!convoy) return res.status(404).json({ msg: 'Convoy not found' });
+
+    // Step 2: Only the convoy host has the ability to set or change group routes
+    const isHost = (convoy.host?._id || convoy.host)?.toString() === req.user.id;
+    if (!isHost) {
+      return res.status(403).json({ msg: 'Only the convoy host can set or update the destination route for the group' });
+    }
+
+    if (is_route_finalised !== undefined) {
+      convoy.is_route_finalised = Boolean(is_route_finalised);
+    }
+
+    // Persist multi-stop ordered waypoints
+    if (waypoints && Array.isArray(waypoints) && waypoints.length > 0) {
+      convoy.waypoints = waypoints.map((w, idx) => ({
+        name: w.name || `Stop ${idx + 1}`,
+        lat: Number(w.lat),
+        lng: Number(w.lng),
+        order: w.order !== undefined ? Number(w.order) : idx + 1
+      }));
+
+      // Final waypoint is the convoy destination
+      const finalStop = waypoints[waypoints.length - 1];
+      convoy.destination_name = finalStop.name || convoy.destination_name;
+      convoy.destination_coordinates = {
+        lat: Number(finalStop.lat),
+        lng: Number(finalStop.lng)
+      };
+    } else {
+      let lat;
+      let lng;
+      if (destination_coordinates) {
+        lat = destination_coordinates.lat;
+        lng = destination_coordinates.lng;
+      } else if (coordinates && Array.isArray(coordinates)) {
+        lng = coordinates[0];
+        lat = coordinates[1];
+      }
+
+      if (destination_name) convoy.destination_name = destination_name;
+      if (lat !== undefined && lng !== undefined) {
+        convoy.destination_coordinates = { lat: Number(lat), lng: Number(lng) };
+      }
+    }
+
+    await convoy.save();
+    await convoy.populate('host', ['name', 'avatar']);
+    await convoy.populate('participants.user', ['name', 'avatar']);
+
+    res.json(convoy);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route    PUT api/convoys/:id/finalise-route
+// @desc     Host finalises route sequence to unlock group "Go" button
+// @access   Private
+router.put('/:id/finalise-route', [auth, checkObjectId('id')], async (req, res) => {
+  try {
+    const convoy = await Convoy.findById(req.params.id);
+    if (!convoy) return res.status(404).json({ msg: 'Convoy not found' });
+
+    const isHost = (convoy.host?._id || convoy.host)?.toString() === req.user.id;
+    if (!isHost) {
+      return res.status(403).json({ msg: 'Only the convoy host can finalise the route sequence' });
+    }
+
+    convoy.is_route_finalised = true;
+    await convoy.save();
+    await convoy.populate('host', ['name', 'avatar']);
+    await convoy.populate('participants.user', ['name', 'avatar']);
+
+    res.json(convoy);
+  } catch (err) {
+    console.error('Finalise route error:', err);
     res.status(500).send('Server Error');
   }
 });

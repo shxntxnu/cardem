@@ -272,4 +272,58 @@ router.get('/user/:user_id', [auth, checkObjectId('user_id')], async (req, res) 
   }
 });
 
+// @route    DELETE api/stats/convoy/:id/history
+// @desc     Delete convoy from personal driving history (per-user deletion; host cannot delete for everyone)
+// @access   Private
+router.delete('/convoy/:id/history', [auth, checkObjectId('id')], async (req, res) => {
+  try {
+    const convoyId = req.params.id;
+    const userId = req.user.id;
+
+    // 1. Delete this user's DriveStats records for this convoy
+    const deletedStats = await DriveStats.deleteMany({ convoy: convoyId, user: userId });
+
+    // 2. Remove user from convoy participants list if present
+    const convoy = await Convoy.findById(convoyId);
+    if (convoy) {
+      convoy.participants = (convoy.participants || []).filter((p) => {
+        const pUserId = (p && p.user && (p.user._id || p.user)) ? (p.user._id || p.user).toString() : null;
+        return pUserId && pUserId !== userId;
+      });
+      await convoy.save();
+    }
+
+    // 3. Recalculate remaining personal driving stats
+    const remainingStats = await DriveStats.find({ user: userId });
+    const totalDistance = remainingStats.reduce((sum, s) => sum + (s.distance_km || 0), 0);
+    const maxSpeedEver = remainingStats.reduce((max, s) => Math.max(max, s.top_speed_kph || 0), 0);
+    const avgSafety = remainingStats.length > 0
+      ? Math.round(remainingStats.reduce((sum, s) => sum + (s.safety_score || 0), 0) / remainingStats.length)
+      : 95;
+
+    // Update Profile totals
+    const profile = await Profile.findOne({ user: userId });
+    if (profile) {
+      profile.total_convoys_completed = Math.max(0, remainingStats.length);
+      profile.overall_safety_rating = avgSafety;
+      await profile.save();
+    }
+
+    res.json({
+      msg: 'Convoy deleted from your personal driving history',
+      convoyId,
+      deletedCount: deletedStats.deletedCount,
+      summary: {
+        total_drives: remainingStats.length,
+        total_distance_km: Math.round(totalDistance * 10) / 10,
+        max_speed_kph: maxSpeedEver,
+        average_safety_score: avgSafety
+      }
+    });
+  } catch (err) {
+    console.error('Delete convoy history error:', err);
+    res.status(500).send('Server Error');
+  }
+});
+
 module.exports = router;

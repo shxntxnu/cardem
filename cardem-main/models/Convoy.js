@@ -77,6 +77,10 @@ const ConvoySchema = new mongoose.Schema({
       order: Number
     }
   ],
+  is_route_finalised: {
+    type: Boolean,
+    default: false
+  },
   participants: [ConvoyParticipantSchema],
   started_at: {
     type: Date,

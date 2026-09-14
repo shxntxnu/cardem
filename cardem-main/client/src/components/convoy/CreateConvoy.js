@@ -1,21 +1,39 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { createConvoy } from '../../actions/convoy';
+import DestinationSearch from '../navigation/DestinationSearch';
 
 const CreateConvoy = ({ createConvoy }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prefilledDest = location.state?.destination;
+
   const [formData, setFormData] = useState({
-    name: '',
+    name: prefilledDest ? `Drive to ${prefilledDest.name}` : '',
     description: '',
-    destination_name: '',
-    destination_lat: '',
-    destination_lng: '',
+    destination_name: prefilledDest?.name || '',
+    destination_lat: prefilledDest?.lat !== undefined ? String(prefilledDest.lat) : '',
+    destination_lng: prefilledDest?.lng !== undefined ? String(prefilledDest.lng) : '',
     max_participants: 20,
     radio_channel: 'convoy-main',
     is_private: false
   });
+
+  const [waypoints, setWaypoints] = useState(
+    prefilledDest
+      ? [
+          {
+            name: prefilledDest.name,
+            display_name: prefilledDest.display_name || prefilledDest.name,
+            lat: prefilledDest.lat,
+            lng: prefilledDest.lng,
+            order: 1
+          }
+        ]
+      : []
+  );
 
   const {
     name,
@@ -28,6 +46,31 @@ const CreateConvoy = ({ createConvoy }) => {
     is_private
   } = formData;
 
+  const handleAddStop = (place) => {
+    if (!place || place.lat === undefined || place.lng === undefined) return;
+    const newStop = {
+      name: place.name || 'Waypoint',
+      display_name: place.display_name || place.name || '',
+      lat: place.lat,
+      lng: place.lng,
+      order: waypoints.length + 1
+    };
+
+    setWaypoints((prev) => [...prev, newStop]);
+    if (!destination_name) {
+      setFormData((prev) => ({
+        ...prev,
+        destination_name: place.name,
+        destination_lat: String(place.lat),
+        destination_lng: String(place.lng)
+      }));
+    }
+  };
+
+  const handleRemoveStop = (index) => {
+    setWaypoints((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const onChange = (e) => {
     const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     setFormData({ ...formData, [e.target.name]: value });
@@ -35,21 +78,30 @@ const CreateConvoy = ({ createConvoy }) => {
 
   const onSubmit = (e) => {
     e.preventDefault();
+
+    const targetDest = waypoints.length > 0 ? waypoints[waypoints.length - 1] : null;
+    const finalDestName = targetDest?.name || destination_name;
+    const finalCoords = targetDest
+      ? { lat: targetDest.lat, lng: targetDest.lng }
+      : destination_lat && destination_lng
+      ? { lat: Number(destination_lat), lng: Number(destination_lng) }
+      : null;
+
     const payload = {
       name,
       description,
       max_participants: Number(max_participants),
       radio_channel,
       is_private,
-      destination: destination_name
-        ? {
-            name: destination_name,
-            coordinates: [
-              destination_lng ? Number(destination_lng) : -0.1278,
-              destination_lat ? Number(destination_lat) : 51.5074
-            ]
-          }
-        : undefined
+      destination_name: finalDestName,
+      destination_coordinates: finalCoords,
+      waypoints: waypoints.map((w, idx) => ({
+        name: w.name,
+        display_name: w.display_name || w.name,
+        lat: w.lat,
+        lng: w.lng,
+        order: idx + 1
+      }))
     };
 
     createConvoy(payload, navigate);
@@ -93,9 +145,52 @@ const CreateConvoy = ({ createConvoy }) => {
             />
           </div>
 
+          {/* Planned Stops & Destination Search */}
+          <div className="form-group">
+            <label>Planned Destinations & Stops (Search to add)</label>
+            <DestinationSearch
+              onSelectDestination={handleAddStop}
+              onAddWaypoint={handleAddStop}
+              isConvoyActive={false}
+            />
+
+            {/* List of Locations before creating/accepting convoy */}
+            {waypoints.length > 0 && (
+              <div className="create-waypoints-list mt-3">
+                <span className="text-xs font-bold text-cyan uppercase tracking-wider mb-2 block">
+                  Chosen Sequence ({waypoints.length} {waypoints.length === 1 ? 'Stop' : 'Stops'}):
+                </span>
+                <div className="waypoints-sequence-list">
+                  {waypoints.map((wp, idx) => {
+                    const isFinal = idx === waypoints.length - 1;
+                    return (
+                      <div key={idx} className={`waypoint-sequence-item ${isFinal ? 'is-final-item' : ''}`}>
+                        <div className="waypoint-num-badge">
+                          {isFinal && waypoints.length > 1 ? '🏁' : idx + 1}
+                        </div>
+                        <div className="waypoint-meta">
+                          <strong className="wp-name">{wp.name}</strong>
+                          {wp.display_name && <span className="wp-sub">{wp.display_name}</span>}
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-wp-remove"
+                          onClick={() => handleRemoveStop(idx)}
+                          title="Remove stop"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="form-group-row">
             <div className="form-group">
-              <label>Destination Landmark</label>
+              <label>Final Destination Landmark (optional)</label>
               <input
                 type="text"
                 name="destination_name"

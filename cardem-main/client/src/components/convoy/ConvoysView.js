@@ -13,8 +13,14 @@ import {
 import { getRecentAlerts } from '../../actions/hazard';
 import FriendsDrawer from '../friends/FriendsDrawer';
 import FriendProfileModal from '../friends/FriendProfileModal';
+import DestinationSearch from '../navigation/DestinationSearch';
 import { HAZARD_META } from '../alerts/AlertsFeed';
 import { calculateDistanceKm, formatDistance } from '../../utils/avatarPresets';
+import {
+  createWatermarkFreeTileLayer,
+  fetchOSRMRoute,
+  fetchOSRMMultiRoute
+} from '../../utils/osmNavigationService';
 
 const ConvoysView = () => {
   const dispatch = useDispatch();
@@ -38,6 +44,16 @@ const ConvoysView = () => {
   const [convoysDrawerOpen, setConvoysDrawerOpen] = useState(true);
   const [friendsWindowOpen, setFriendsWindowOpen] = useState(true);
   const [friendSearch, setFriendSearch] = useState('');
+  const [isLocating, setIsLocating] = useState(false);
+
+  // GPS Destination Search & Driving Route Preview State
+  const [selectedDestination, setSelectedDestination] = useState(null);
+  const [destinationRoute, setDestinationRoute] = useState(null);
+  const [waypoints, setWaypoints] = useState([]);
+  const [, setIsRouting] = useState(false);
+  const destinationMarkerRef = useRef(null);
+  const waypointMarkersRef = useRef([]);
+  const destinationRouteLineRef = useRef(null);
 
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -119,10 +135,8 @@ const ConvoysView = () => {
       attributionControl: false
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd'
-    }).addTo(map);
+    // Watermark-Free OpenStreetMap Dark Automotive Tiles
+    createWatermarkFreeTileLayer(L).addTo(map);
 
     L.control.zoom({ position: 'topright' }).addTo(map);
 
@@ -426,10 +440,34 @@ const ConvoysView = () => {
     }
   };
 
-  // Center on current location
+  // Step 3: Center and lock on current GPS location
   const handleRecenter = () => {
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.setView([coords.lat, coords.lng], 15, { animate: true });
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    if (navigator.geolocation) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const newLat = pos.coords.latitude;
+          const newLng = pos.coords.longitude;
+          setCoords({ lat: newLat, lng: newLng });
+          setGpsLocked(true);
+          if (userMarkerRef.current) {
+            userMarkerRef.current.setLatLng([newLat, newLng]);
+          }
+          map.flyTo([newLat, newLng], 15, { animate: true, duration: 1.2 });
+          setIsLocating(false);
+        },
+        (err) => {
+          console.warn('Recenter GPS error:', err.message);
+          map.setView([coords.lat, coords.lng], 15, { animate: true });
+          setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    } else {
+      map.setView([coords.lat, coords.lng], 15, { animate: true });
     }
   };
 
@@ -462,11 +500,321 @@ const ConvoysView = () => {
     dispatch(clearFriendDetails());
   };
 
+  // Clear all destination and multi-stop route layers
+  const clearMapRouteLayers = (map) => {
+    if (!map) return;
+    if (destinationMarkerRef.current) {
+      map.removeLayer(destinationMarkerRef.current);
+      destinationMarkerRef.current = null;
+    }
+    if (waypointMarkersRef.current.length > 0) {
+      waypointMarkersRef.current.forEach((m) => map.removeLayer(m));
+      waypointMarkersRef.current = [];
+    }
+    if (destinationRouteLineRef.current) {
+      map.removeLayer(destinationRouteLineRef.current);
+      destinationRouteLineRef.current = null;
+    }
+  };
+
+  // Render multi-stop route corridor and pin markers on ConvoysView map
+  const renderRouteForWaypoints = async (stopsList) => {
+    if (!stopsList || stopsList.length === 0) return;
+    const L = getLeaflet();
+    const map = mapInstanceRef.current;
+    if (!L || !map) return;
+
+    clearMapRouteLayers(map);
+
+    // Place numbered pin for each stop
+    stopsList.forEach((stop, idx) => {
+      const isFinal = idx === stopsList.length - 1;
+      const markerHtml = `
+        <div class="waypoint-pin-container ${isFinal ? 'is-final-pin' : ''}">
+          <div class="waypoint-pin-badge ${isFinal ? 'final-badge' : ''}">
+            ${isFinal ? '🏁' : idx + 1}
+          </div>
+          <span class="waypoint-pin-label">${stop.name}</span>
+        </div>
+      `;
+      const icon = L.divIcon({
+        className: 'waypoint-div-icon',
+        html: markerHtml,
+        iconSize: [36, 42],
+        iconAnchor: [18, 38]
+      });
+      const marker = L.marker([stop.lat, stop.lng], { icon }).addTo(map);
+      marker.bindPopup(`<b>${isFinal ? '🏁 Final Stop' : `Stop ${idx + 1}`}: ${stop.name}</b><br/>${stop.display_name || ''}`);
+      waypointMarkersRef.current.push(marker);
+    });
+
+    try {
+      setIsRouting(true);
+      let route;
+      if (stopsList.length === 1) {
+        route = await fetchOSRMRoute(coords, stopsList[0]);
+      } else {
+        const allPoints = [coords, ...stopsList.map((s) => ({ lat: s.lat, lng: s.lng }))];
+        route = await fetchOSRMMultiRoute(allPoints);
+      }
+      setDestinationRoute(route);
+
+      // Draw dual-layer ideal route: neon outer glow + high-contrast inner highway stroke
+      const latLngs = route.coordinates.map(([lng, lat]) => [lat, lng]);
+      const glowLine = L.polyline(latLngs, {
+        color: '#00f2fe',
+        weight: 12,
+        opacity: 0.35,
+        lineCap: 'round',
+        lineJoin: 'round',
+        className: 'ideal-route-glow'
+      });
+
+      const coreLine = L.polyline(latLngs, {
+        color: '#00f2fe',
+        weight: 5,
+        opacity: 0.95,
+        lineCap: 'round',
+        lineJoin: 'round',
+        className: 'ideal-route-core'
+      });
+
+      const routeGroup = L.layerGroup([glowLine, coreLine]).addTo(map);
+      destinationRouteLineRef.current = routeGroup;
+
+      map.fitBounds(coreLine.getBounds(), { padding: [80, 80], maxZoom: 16 });
+    } catch (err) {
+      console.warn('Convoys route calculation error:', err.message);
+      const last = stopsList[stopsList.length - 1];
+      map.flyTo([last.lat, last.lng], 14, { animate: true });
+    } finally {
+      setIsRouting(false);
+    }
+  };
+
+  // Handle selecting a destination (single stop or initial destination)
+  const handleSelectDestination = async (place) => {
+    setSelectedDestination(place);
+    const updated = [place];
+    setWaypoints(updated);
+    await renderRouteForWaypoints(updated);
+  };
+
+  // Handle adding an additional stop to the sequence
+  const handleAddWaypoint = async (place) => {
+    const updated = [...waypoints, place];
+    setWaypoints(updated);
+    setSelectedDestination(updated[updated.length - 1]);
+    await renderRouteForWaypoints(updated);
+  };
+
+  // Move stop up or down in sequence
+  const handleMoveWaypoint = async (idx, direction) => {
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= waypoints.length) return;
+    const updated = [...waypoints];
+    const [removed] = updated.splice(idx, 1);
+    updated.splice(targetIdx, 0, removed);
+    setWaypoints(updated);
+    setSelectedDestination(updated[updated.length - 1]);
+    await renderRouteForWaypoints(updated);
+  };
+
+  // Remove a stop from sequence
+  const handleRemoveWaypoint = async (idx) => {
+    const updated = waypoints.filter((_, i) => i !== idx);
+    setWaypoints(updated);
+    if (updated.length === 0) {
+      handleClearDestination();
+    } else {
+      setSelectedDestination(updated[updated.length - 1]);
+      await renderRouteForWaypoints(updated);
+    }
+  };
+
+  const handleClearDestination = () => {
+    const map = mapInstanceRef.current;
+    if (map) {
+      clearMapRouteLayers(map);
+    }
+    setWaypoints([]);
+    setSelectedDestination(null);
+    setDestinationRoute(null);
+  };
+
+  const handleBeginNavigationDirect = () => {
+    const stops = waypoints.length > 0 ? waypoints : selectedDestination ? [selectedDestination] : [];
+    if (stops.length > 0) {
+      navigate('/drive', {
+        state: {
+          destination: stops[0],
+          waypoints: stops,
+          autoStartNav: true,
+          returnTo: '/convoys'
+        }
+      });
+    }
+  };
+
+  const handleHostConvoyHere = () => {
+    const stops = waypoints.length > 0 ? waypoints : selectedDestination ? [selectedDestination] : [];
+    if (stops.length > 0) {
+      navigate('/create-convoy', {
+        state: {
+          destination: stops[stops.length - 1],
+          waypoints: stops
+        }
+      });
+    }
+  };
+
   return (
     <div className="convoys-explorer-page animate-fade-in">
       {/* Map Container */}
       <div className="explorer-map-wrapper">
         <div ref={mapContainerRef} className="explorer-leaflet-map" />
+
+        {/* Floating GPS Destination Search Bar with Add Stop capability */}
+        <div className="convoys-floating-search-bar">
+          <DestinationSearch
+            onSelectDestination={handleSelectDestination}
+            onAddWaypoint={handleAddWaypoint}
+            isConvoyActive={false}
+            isHost={true}
+          />
+        </div>
+
+        {/* Floating Destination Preview HUD Card */}
+        {selectedDestination && (
+          <div className="destination-preview-card hud-card animate-slide-up">
+            {/* Step 1: Ideal Route Header Ribbon */}
+            <div className="dest-preview-ideal-ribbon">
+              <span className="ideal-tag">⚡ IDEAL ROUTE (FASTEST)</span>
+              <span className="ideal-via">via {destinationRoute?.summary || 'Primary Highway Corridor'}</span>
+            </div>
+
+            <div className="dest-preview-header">
+              <div className="dest-preview-icon">🏁</div>
+              <div className="dest-preview-text">
+                <span className="dest-preview-tag">CHOSEN DESTINATION</span>
+                <h3 className="dest-preview-title">{selectedDestination.name}</h3>
+                <p className="dest-preview-address">{selectedDestination.display_name}</p>
+              </div>
+              <button
+                className="btn-dest-close"
+                onClick={handleClearDestination}
+                title="Clear route"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Multi-Stop Sequence List */}
+            {waypoints.length > 0 && (
+              <div className="dest-waypoints-sequence-box">
+                <div className="dest-wp-title-strip">
+                  <span className="dest-wp-badge-count">📍 {waypoints.length} {waypoints.length === 1 ? 'Planned Stop' : 'Planned Stops'}</span>
+                  <span className="dest-wp-sub-note">Search to add more stops to sequence</span>
+                </div>
+                <div className="dest-wp-scroll-list">
+                  {waypoints.map((wp, idx) => {
+                    const isFinal = idx === waypoints.length - 1;
+                    return (
+                      <div key={wp.place_id || idx} className={`dest-wp-row ${isFinal && waypoints.length > 1 ? 'is-final-wp' : ''}`}>
+                        <span className="wp-order-num">{isFinal && waypoints.length > 1 ? '🏁' : idx + 1}</span>
+                        <div className="wp-name-col">
+                          <span className="wp-item-name">{wp.name}</span>
+                          {wp.display_name && <span className="wp-item-addr">{wp.display_name}</span>}
+                        </div>
+                        <div className="wp-control-btns">
+                          <button
+                            type="button"
+                            className="btn-wp-reorder"
+                            onClick={() => handleMoveWaypoint(idx, 'up')}
+                            disabled={idx === 0}
+                            title="Move stop earlier"
+                          >
+                            ⬆️
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-wp-reorder"
+                            onClick={() => handleMoveWaypoint(idx, 'down')}
+                            disabled={idx === waypoints.length - 1}
+                            title="Move stop later"
+                          >
+                            ⬇️
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-wp-remove"
+                            onClick={() => handleRemoveWaypoint(idx)}
+                            title="Remove stop"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Step 1: Followed by ETA and Distance */}
+            {destinationRoute && (
+              <div className="dest-preview-stats">
+                {/* Dynamic ETA first */}
+                <div className="dest-stat-pill dest-stat-eta">
+                  <i className="fa-solid fa-clock text-yellow"></i>
+                  <div className="stat-text-col">
+                    <span className="stat-label">DYNAMIC ETA</span>
+                    <span className="stat-value">
+                      <strong>{destinationRoute.durationMinutes || Math.max(1, Math.round(destinationRoute.durationSeconds / 60))} mins</strong>
+                      {destinationRoute.estimatedArrival && (
+                        <small className="stat-arrival"> (Arr ~{destinationRoute.estimatedArrival})</small>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Total Distance second */}
+                <div className="dest-stat-pill dest-stat-dist">
+                  <i className="fa-solid fa-route text-cyan"></i>
+                  <div className="stat-text-col">
+                    <span className="stat-label">TOTAL DISTANCE</span>
+                    <span className="stat-value">
+                      <strong>{destinationRoute.distanceKm || (destinationRoute.distanceMeters / 1000).toFixed(1)} km</strong>
+                      <small className="stat-miles"> ({destinationRoute.distanceMiles || ((destinationRoute.distanceMeters / 1000) * 0.621371).toFixed(1)} mi)</small>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="dest-preview-actions">
+              <button
+                className="btn btn-primary btn-glow btn-sm btn-begin-nav-direct"
+                onClick={handleBeginNavigationDirect}
+                id="btn-begin-navigation-direct"
+              >
+                🚀 Begin Navigation
+              </button>
+              <button
+                className="btn btn-warning btn-sm"
+                onClick={handleHostConvoyHere}
+              >
+                <i className="fa-solid fa-flag-checkered"></i> Host Convoy
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleClearDestination}
+              >
+                Clear Route
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Top Floating Control Bar */}
         <div className="map-floating-top-controls">
@@ -481,6 +829,14 @@ const ConvoysView = () => {
           </button>
 
           <div className="top-right-actions">
+            <button
+              className={`btn btn-hud-action btn-sm ${isLocating ? 'pulse-border' : ''}`}
+              onClick={handleRecenter}
+              title="Recenter map on your current GPS location"
+            >
+              <i className="fa-solid fa-location-crosshairs text-cyan"></i>
+              <span className="btn-text">My Location</span>
+            </button>
             <button
               className={`btn btn-hud-action btn-sm ${friendsWindowOpen ? 'btn-glow' : ''}`}
               onClick={() => setFriendsWindowOpen(!friendsWindowOpen)}
@@ -499,6 +855,19 @@ const ConvoysView = () => {
               <i className="fa-solid fa-key"></i> Join Code
             </button>
           </div>
+        </div>
+
+        {/* Step 3: Floating My Location button on the map */}
+        <div className="recenter-gps-wrap convoys-view-recenter">
+          <button
+            className={`recenter-gps-btn ${isLocating ? 'is-locating' : ''}`}
+            onClick={handleRecenter}
+            title="Get current location / Recenter map navigation"
+            aria-label="Recenter map on current location"
+          >
+            <span className="gps-icon">{isLocating ? '⏳' : '🎯'}</span>
+            <span className="gps-label">MY LOC</span>
+          </button>
         </div>
 
         {/* Right-Side Friends Window (Spot Friends on Map) */}

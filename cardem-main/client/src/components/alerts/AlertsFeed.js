@@ -8,6 +8,7 @@ import {
 } from '../../actions/hazard';
 import HazardReport from './HazardReport';
 import { calculateDistanceKm, formatDistance } from '../../utils/avatarPresets';
+import { createWatermarkFreeTileLayer } from '../../utils/osmNavigationService';
 
 export const HAZARD_META = {
   police: { icon: '👮', label: 'Police Radar', color: '#3b82f6', category: 'enforcement' },
@@ -123,10 +124,7 @@ const AlertsFeed = () => {
       attributionControl: false
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd'
-    }).addTo(map);
+    createWatermarkFreeTileLayer(L).addTo(map);
 
     L.control.zoom({ position: 'topright' }).addTo(map);
 

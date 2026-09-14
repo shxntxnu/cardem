@@ -5,6 +5,7 @@ import {
   GET_GLOBAL_LEADERBOARD,
   GET_MY_STATS,
   STATS_SUBMITTED,
+  CONVOY_HISTORY_DELETED,
   STATS_ERROR
 } from './types';
 
@@ -77,3 +78,25 @@ export const getMyStats = () => async (dispatch) => {
     });
   }
 };
+
+// Delete convoy from personal driving history (per-user deletion)
+export const deleteConvoyHistory = (convoyId) => async (dispatch) => {
+  try {
+    const res = await api.delete(`/stats/convoy/${convoyId}/history`);
+
+    dispatch({
+      type: CONVOY_HISTORY_DELETED,
+      payload: { convoyId, summary: res.data.summary }
+    });
+
+    dispatch(setAlert('Convoy removed from your driving history', 'info'));
+  } catch (err) {
+    const msg = err.response?.data?.msg || 'Could not delete convoy history';
+    dispatch(setAlert(msg, 'danger'));
+    dispatch({
+      type: STATS_ERROR,
+      payload: { msg }
+    });
+  }
+};
+

@@ -19,7 +19,7 @@ const Login = () => {
 
   const onSubmit = (e) => {
     e.preventDefault();
-    dispatch(login(email, password));
+    dispatch(login(email.trim(), password));
   };
 
   // Redirect if already authenticated
@@ -41,15 +41,18 @@ const Login = () => {
         <form onSubmit={onSubmit} className="auth-form">
           <div className="form-group">
             <label className="form-label">
-              <i className="fa-solid fa-envelope"></i> Email Address
+              <i className="fa-solid fa-user-astronaut"></i> Email Address or Callsign
             </label>
             <input
-              type="email"
+              type="text"
               className="form-input"
-              placeholder="driver@cardem.com"
+              placeholder="driver@cardem.com or Callsign"
               name="email"
               value={email}
               onChange={onChange}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
               required
             />
           </div>

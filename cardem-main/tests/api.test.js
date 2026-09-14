@@ -193,4 +193,32 @@ describe('Cardem Enthusiast Mobile API Test Suite', () => {
       expect(res.body.location.coordinates).toEqual([-0.1278, 51.5074]);
     });
   });
+
+  describe('Host Permissions, Leave Convoy & History Deletion', () => {
+    it('should reject destination updates without valid authentication', async () => {
+      const res = await request(app)
+        .put('/api/convoys/507f1f77bcf86cd799439011/destination')
+        .send({
+          destination_name: 'Silverstone Circuit',
+          destination_coordinates: { lat: 52.0733, lng: -1.0147 }
+        });
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('should reject leaving convoy without authentication', async () => {
+      const res = await request(app)
+        .post('/api/convoys/507f1f77bcf86cd799439011/leave');
+
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('should reject history deletion without authentication', async () => {
+      const res = await request(app)
+        .delete('/api/stats/convoy/507f1f77bcf86cd799439011/history');
+
+      expect(res.statusCode).toBe(401);
+    });
+  });
 });
+

@@ -107,6 +107,22 @@ const App = () => {
                 }
               />
               <Route
+                path="/drive"
+                element={
+                  <PrivateRoute>
+                    <ConvoyMapHUD />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/map"
+                element={
+                  <PrivateRoute>
+                    <ConvoyMapHUD />
+                  </PrivateRoute>
+                }
+              />
+              <Route
                 path="/alerts"
                 element={
                   <PrivateRoute>

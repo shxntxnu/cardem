@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Cardem Enthusiast Mobile Client (iOS and Android Compatible)",
-  "proxy": "http://localhost:5001",
+  "proxy": "http://localhost:5000",
   "dependencies": {
     "axios": "^1.7.9",
     "leaflet": "^1.9.4",
