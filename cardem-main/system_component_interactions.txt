@@ -1,0 +1,185 @@
+================================================================================
+CARDEM ENTHUSIAST CONVOY & NAVIGATION SYSTEM - COMPONENT INTERACTIONS
+================================================================================
+
+1. SYSTEM OVERVIEW
+--------------------------------------------------------------------------------
+CarDem is a full-stack automotive enthusiast platform enabling group convoy 
+travel, multi-stop route sequencing, real-time GPS telemetry, crowdsourced road 
+hazard intelligence, turn-by-turn cockpit navigation, push-to-talk voice 
+communication, and driver garage/performance tracking.
+
+This document drafts the logical description of how system components interact,
+analyzing core workflows, listing step-by-step logic flows, and cataloging all
+architectural elements required for a system architecture diagram.
+
+
+================================================================================
+2. STEP-BY-STEP LOGICAL DESCRIPTIONS (WORKFLOW LOGIC)
+================================================================================
+
+A. Authentication & Driver Profile Setup:
+1) Driver registers or logs in with credentials.
+2) Auth API verifies credentials, generates JWT token, and returns user profile.
+3) Driver opens Garage and inputs vehicle details (Year, Make, Model, Car/Motorcycle).
+4) Driver designates one vehicle as the "Primary Ride".
+5) Driver shares unique Friend Code or connects with peer drivers via Fleet Radar.
+
+B. Destination Search & Multi-Stop Waypoint Sequence Planning:
+1) Driver enters destination or point-of-interest query in search bar.
+2) Nominatim API returns geocoded coordinates, place names, and addresses.
+3) Driver clicks "+ Add Stop" to queue multiple locations into a planned sequence.
+4) System calls OSRM Multi-Route API with user GPS coordinates and all stops.
+5) System renders continuous highway polyline, numbered pins ([1], [2], ... [🏁]),
+   aggregated distance, dynamic ETA, and estimated arrival clock.
+6) Driver can reorder stops (Move Up / Down) or remove stops; route polyline and
+   metrics recalculate dynamically upon every alteration.
+
+C. Convoy Hosting, Joining & Lobby Inspection:
+1) Lead driver (Host) creates a convoy with title, description, privacy, vehicle
+   restrictions, and initial multi-stop route.
+2) System generates a unique 6-character Join Code and persists convoy session in DB.
+3) Participant drivers browse nearby public convoys or submit 6-character Join Code.
+4) System validates code, admits driver, and establishes Socket.io room connection.
+5) All members enter Convoy Lobby to inspect driver roster, vehicle specs, and the
+   planned route itinerary prior to departure.
+6) Host finalises route order -> Socket broadcasts route lock to all members.
+7) Members click "Accept Route & Begin Navigation" -> transitions into driving HUD.
+
+D. Real-Time Turn-by-Turn Driving & Cockpit HUD Navigation:
+1) User clicks "Go" / "Begin Navigation" to activate navigation mode.
+2) System sets "nav-mode-active" on document body -> hides distracting global UI
+   (top navbar, bottom dock, search bars, non-navigation buttons).
+3) Leaflet map switches to rotating cockpit mode, tracking driver's GPS location
+   and rotating smoothly around device heading with 1.42x scale (preventing corner clip).
+4) Docked bottom Navigation HUD displays:
+   - Target stop name and active corridor ribbon.
+   - Next maneuver arrow, distance, and street instruction.
+   - Real-time speedometer pill and Overpass API circular speed limit sign.
+   - Dynamic ETA, remaining distance, arrival clock, and upcoming traffic signals.
+5) Proximity culling strictly constrains alert monitoring to a 3000-meter radius to
+   guarantee 60 FPS rendering and minimize device overhead.
+6) User clicks "End" -> interactive modal prompts confirmation to end navigation.
+7) Upon confirmation, navigation ends, clean mode is removed, and user is returned
+   to the exact previous page/view (Convoys Explorer, Convoy Lobby, or Route Planner)
+   with all navigation bars and controls fully restored.
+
+E. Real-Time Telemetry & Global Enthusiast Presence:
+1) Client Geolocation Watcher streams position, heading, and speed every second.
+2) Client emits "global_presence_ping" and convoy "telemetry_update" to Socket.io.
+3) Socket gateway caches active drivers in memory and broadcasts updates to peers.
+4) Map renders pulsing community driver markers and convoy teammates with custom
+   colors, driver names, vehicle icons, and live telemetry badges.
+
+F. Road Hazard Intelligence & Crowdsourced Reporting:
+1) Client queries Overpass API for live infrastructure hazards (speed cameras,
+   railway crossings, road construction, traffic lights) within driver radius.
+2) When driver spots a hazard (police trap, camera, obstruction, accident), driver
+   opens Alert drawer, selects hazard type, and submits report.
+3) System stores hazard point with geospatial coordinates in MongoDB.
+4) Socket.io broadcasts new hazard alert in real-time to all nearby drivers.
+5) Approaching drivers receive high-visibility visual pin and audio chime alert.
+
+G. Push-to-Talk (PTT) Voice Intercom:
+1) Driver presses and holds Walkie-Talkie button docked on right screen edge.
+2) AudioService captures microphone stream and sends compressed audio chunks
+   over Socket.io to convoy voice room.
+3) Teammates' devices automatically play incoming voice stream with live visualizer.
+4) Driver releases button -> transmits voice-end event and clears radio channel.
+
+H. Drive Completion & Enthusiast Leaderboard:
+1) Driver clicks "Finish Drive" on HUD.
+2) System compiles session statistics (duration, top speed, average speed,
+   distance traveled, harsh braking count, harsh acceleration count).
+3) Stats API records drive session linked to driver profile and convoy.
+4) System navigates driver to Convoy / Global Leaderboard displaying rankings,
+   speed achievements, safety scores, and fleet driver statistics.
+5) Individual driver can delete convoy from personal history without affecting
+   convoy records of other group participants.
+
+
+================================================================================
+3. SYSTEM ARCHITECTURE ELEMENTS IDENTIFICATION
+================================================================================
+
+A. ACTORS (Roles):
+- Enthusiast Driver: General user viewing map, searching spots, adding friends.
+- Convoy Host: Lead driver who creates convoy session, sets/reorders stops,
+  and finalises routes for group.
+- Convoy Member: Participant driver who joins session, follows group itinerary,
+  broadcasts telemetry, and talks over PTT voice.
+- Peer Community Driver: Nearby logged-in driver visible via global presence.
+
+B. FRONTEND PRESENTATION LAYER (React.js, Redux, Leaflet, Vanilla CSS):
+- Navigation & Header Dock: Navbar.js (Top mobile bar & bottom mobile dock).
+- Convoy Explorer: ConvoysView.js (Map discovery, multi-stop planning, fleet radar).
+- Convoy Lobby: ConvoyLobby.js (Pre-trip itinerary list, participant fleet roster).
+- Convoy Setup: CreateConvoy.js (Modal to host drive, configure stops & rules).
+- Live Cockpit Map: ConvoyMapHUD.js (Leaflet canvas, heading rotation, route planner).
+- Driving Guidance HUD: NavigationHUD.js (Turn arrows, speed limit, ETA, End button).
+- Voice Intercom: WalkieTalkie.js (Push-to-talk audio transmitter/receiver).
+- Hazard Drawer & Feed: HazardReport.js & AlertsFeed.js (Alert reporting & feed).
+- Driver Hub & Garage: Dashboard.js & GarageView.js (Profile, vehicle management).
+- Rankings & History: Leaderboard.js (Drive summary, convoy ranking, history delete).
+
+C. CLIENT SERVICES & STATE LAYER:
+- Redux Store & Reducers: auth, convoy, hazard, profile, stats, alert.
+- Audio Service: audioService.js (Web Audio API mic capture, sound chimes, playback).
+- Socket Client Service: socketService.js (Bi-directional real-time communication).
+- OSM Navigation Engine: osmNavigationService.js (Nominatim, OSRM, Overpass fetchers).
+
+D. BACKEND API & CONTROLLER LAYER (Node.js, Express.js):
+- Auth Controller: routes/api/auth.js (JWT auth, token validation, login).
+- Users Controller: routes/api/users.js (Driver registration, credential checks).
+- Convoys Controller: routes/api/convoys.js (Create, list, join, waypoints update,
+  route finalise, leave convoy, delete user convoy history).
+- Hazards Controller: routes/api/hazard.js (Crowdsourced hazard reporting & querying).
+- Profile & Garage Controller: routes/api/profile.js (Vehicles, friend codes, fleet).
+- Stats Controller: routes/api/stats.js (Drive stats persistence, leaderboard data).
+- Auth Middleware: middleware/auth.js (Dual Bearer token & x-auth-token validation).
+
+E. REAL-TIME COMMUNICATIONS GATEWAY (Socket.io):
+- Gateway Engine: socket/convoySocket.js
+- Global Presence Channel: "global_presence_ping", "global_drivers_updated"
+- Convoy Room Management: "join_convoy", "leave_convoy", "convoy_roster_update"
+- Navigation Synchronization: "update_destination", "finalise_convoy_route"
+- Telemetry Relay: "client_telemetry", "peer_telemetry"
+- Hazard Broadcast: "hazard_reported", "new_hazard_alert"
+- Voice Stream: "voice_audio_chunk", "incoming_voice_audio"
+
+F. DATABASE PERSISTENCE LAYER (MongoDB & Mongoose):
+- User Collection (models/User.js): Credentials, name, avatar, account timestamps.
+- Profile Collection (models/Profile.js): Friend code, friends array, garage vehicles.
+- Convoy Collection (models/Convoy.js): Join code, host ID, participants, status,
+  destination_name, destination_coordinates, waypoints sequence, is_route_finalised,
+  deleted_by_users array.
+- Hazard Collection (models/Hazard.js): Alert type, description, location (GeoJSON Point
+  with 2dsphere spatial index), reporter ID, timestamp.
+- DriveStats Collection (models/DriveStats.js): Distance km, duration sec, top speed,
+  avg speed, harsh braking/accel counts, convoy ID, user ID.
+
+G. EXTERNAL THIRD-PARTY APIS & SERVICES:
+- OpenStreetMap Nominatim API: Place search, address geocoding, reverse geocoding.
+- OpenStreetMap Foundation Tiles: Standard base map raster tiles (tile.openstreetmap.org)
+  rendered under dark automotive CSS filter.
+- OSRM (Open Source Routing Machine) API: Driving route geometry, multi-stop distance,
+  duration, and turn maneuver step-by-step instructions.
+- Overpass API: Live real-time road intelligence (speed cameras, construction zones,
+  traffic signal counts, highway maxspeed attributes).
+
+H. KEY DATA INPUTS & OUTPUTS:
+- Inputs:
+  * Driver search query text (e.g. "Silverstone Circuit", "M4 Junction 12").
+  * Device GPS coordinates (lat, lng, accuracy, altitude, heading, speed).
+  * Microphone raw audio stream (Float32 / PCM chunks).
+  * Road hazard submission (type: police/camera/hazard, coordinates, description).
+  * Stop sequence reordering actions (stop index, direction up/down).
+- Outputs:
+  * Geocoded destination autocomplete list.
+  * Turn maneuvers (arrow, distance in m/km/mi, street name instruction).
+  * Speedometer reading (MPH or KM/H) vs. Overpass speed limit warning.
+  * Real-time convoy member locations and driving telemetry on map.
+  * Audio voice playback from teammates over PTT.
+  * Proximity audio/visual hazard warning (within 3000m radius).
+  * Session driving score and leaderboard rankings.
+================================================================================
