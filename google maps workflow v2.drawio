@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" agent="Claude">
+<mxfile host="app.diagrams.net" agent="Claude" pages="2">
   <diagram id="gmaps_workflow" name="Google Maps Workflow">
     <mxGraphModel dx="456" dy="2580" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1850" pageHeight="2350" math="0" shadow="0">
       <root>
@@ -496,6 +496,488 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e66" edge="1" parent="1" source="n45" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="n46" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="convoy_workflow" name="Page 2 - Convoy Mode">
+    <mxGraphModel dx="1905" dy="3414" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="2450" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="lane_user" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#b3b3b3;dashed=1;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;" value="USER / APP LAYER" vertex="1">
+          <mxGeometry height="2260" width="300" x="10" y="10" as="geometry" />
+        </mxCell>
+        <mxCell id="title" parent="1" style="text;html=1;fontSize=20;fontStyle=1;align=left;verticalAlign=middle;fontColor=#333333;" value="PAGE 2 — CONVOY MODE: Multi-Vehicle Group Navigation (built on top of core Google-Maps-style engine from Page 1)" vertex="1">
+          <mxGeometry height="40" width="900" x="40" y="-60" as="geometry" />
+        </mxCell>
+        <mxCell id="p1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=12;fontStyle=1;arcSize=40;" value="START User taps &quot;Start a Convoy&quot;" vertex="1">
+          <mxGeometry height="60" width="240" x="40" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="p2" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="Create a new convoy, or join an existing one?" vertex="1">
+          <mxGeometry height="80" width="240" x="40" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="p3" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="Set convoy name, destination &amp; take on default role = Leader" vertex="1">
+          <mxGeometry height="70" width="240" x="40" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="p4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="Scan QR code / enter invite code / tap shared link from Leader" vertex="1">
+          <mxGeometry height="70" width="240" x="40" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="p7" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="Assign special role? (Leader / Sweep-Tail / Member)" vertex="1">
+          <mxGeometry height="80" width="260" x="40" y="510" as="geometry" />
+        </mxCell>
+        <mxCell id="p8" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="Leader sets destination &amp; route. Sweep-Tail = last vehicle, owns &quot;watch the rear&quot; safety duty (per convoy etiquette rules)" vertex="1">
+          <mxGeometry height="90" width="260" x="40" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="p9" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="All members marked &quot;Ready&quot;?" vertex="1">
+          <mxGeometry height="80" width="260" x="40" y="750" as="geometry" />
+        </mxCell>
+        <mxCell id="p10" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="Leader taps &quot;Begin Convoy&quot;" vertex="1">
+          <mxGeometry height="60" width="260" x="40" y="860" as="geometry" />
+        </mxCell>
+        <mxCell id="p12" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="All members&#39; apps auto-load the identical route — no manual entry needed by passengers/followers" vertex="1">
+          <mxGeometry height="80" width="260" x="40" y="950" as="geometry" />
+        </mxCell>
+        <mxCell id="p14" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="CONVOY NAVIGATION MODE begins: turn-by-turn instructions + mini convoy map showing every member as a colored icon relative to you" vertex="1">
+          <mxGeometry height="100" width="260" x="40" y="1170" as="geometry" />
+        </mxCell>
+        <mxCell id="a1" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="This vehicle reached its destination?" vertex="1">
+          <mxGeometry height="80" width="260" x="40" y="1930" as="geometry" />
+        </mxCell>
+        <mxCell id="a2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;" value="Mark member as arrived; notify convoy: &quot;X has arrived&quot;" vertex="1">
+          <mxGeometry height="70" width="260" x="340" y="2000" as="geometry" />
+        </mxCell>
+        <mxCell id="a3" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="All members arrived, or Leader ends convoy?" vertex="1">
+          <mxGeometry height="80" width="260" x="40" y="2110" as="geometry" />
+        </mxCell>
+        <mxCell id="a4" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="Display convoy trip summary: distance, duration, stops, members, signals sent" vertex="1">
+          <mxGeometry height="80" width="260" x="40" y="2220" as="geometry" />
+        </mxCell>
+        <mxCell id="a5" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;" value="Save convoy history; offer &quot;Save this group&quot; for a one-tap re-invite next time" vertex="1">
+          <mxGeometry height="70" width="260" x="340" y="2220" as="geometry" />
+        </mxCell>
+        <mxCell id="a6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#666666;strokeColor=#333333;fontColor=#ffffff;fontSize=12;fontStyle=1;arcSize=40;" value="END Convoy session closes → return to Normal/Solo Mode" vertex="1">
+          <mxGeometry height="60" width="260" x="40" y="2330" as="geometry" />
+        </mxCell>
+        <mxCell id="ce1" edge="1" parent="1" source="p1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce2" edge="1" parent="1" source="p2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p3" value="Create">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce3" edge="1" parent="1" source="p2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="p4" value="Join">
+          <mxGeometry relative="1" x="-0.5431" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="20.06" y="190" />
+              <mxPoint x="20.06" y="360" />
+              <mxPoint x="160.06" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce4" edge="1" parent="1" source="p3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p5" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce5" edge="1" parent="1" source="p4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p5" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce7" edge="1" parent="1" source="p6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p7" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="470.06" y="480" />
+              <mxPoint x="170.06" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce8" edge="1" parent="1" source="p7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce9" edge="1" parent="1" source="p8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p9" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce10" edge="1" parent="1" source="p9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=1;exitY=0.5;entryX=0.5;entryY=0;innerLoopWaypoints=1;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" target="p9" value="No — waiting for others">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="340" y="790" />
+              <mxPoint x="340" y="750" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce11" edge="1" parent="1" source="p9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p10" value="Yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce12" edge="1" parent="1" source="p10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p11" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce13" edge="1" parent="1" source="p11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p12" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce15" edge="1" parent="1" source="p12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p14" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce17" edge="1" parent="1" source="p14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p15" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce18" edge="1" parent="1" source="p15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p14" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce19" edge="1" parent="1" source="p15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.2;" target="s1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1870" y="1210" />
+              <mxPoint x="1870" y="258" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce28" edge="1" parent="1" source="p14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=0.5;exitY=1;entryX=0;entryY=0.75;entryDx=0;entryDy=0;" target="c1" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="170.09" y="1290" />
+              <mxPoint x="910.09" y="1290" />
+              <mxPoint x="910.09" y="164.36" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce29" edge="1" parent="1" source="p14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=0.75;exitY=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" target="c2" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="235" y="1380" />
+              <mxPoint x="1190" y="1380" />
+              <mxPoint x="1190" y="242" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce36" edge="1" parent="1" source="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=0;exitY=0.5;entryX=0;entryY=1;" target="p14" value="No">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1090" y="686.64" />
+              <mxPoint x="1090" y="1330" />
+              <mxPoint x="40" y="1330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce38" edge="1" parent="1" source="p15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=1;exitY=0.7;entryX=0;entryY=0.1;" target="r0" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1950" y="1226" />
+              <mxPoint x="1950" y="1155.14" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce39" edge="1" parent="1" source="r0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=0;exitY=0.5;entryX=1;entryY=1;" target="p15" value="No — stay online">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2010" y="1175.14" />
+              <mxPoint x="2010" y="1270" />
+              <mxPoint x="600" y="1270" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce46" edge="1" parent="1" source="r4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=0;exitY=0.5;entryX=1;entryY=0.9;" target="p14" value="guide breadcrumb feeds navigation">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2790" y="1430" />
+              <mxPoint x="2790" y="1260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce47" edge="1" parent="1" source="r5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=0;exitY=0.5;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" target="p15" value="Yes — resume live sync">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1910" y="1760" />
+              <mxPoint x="1910" y="1180" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce49" edge="1" parent="1" source="p15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=0.3;exitY=1;entryX=0.3;entryY=0;" target="a1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce50" edge="1" parent="1" source="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" target="a2" value="Yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce51" edge="1" parent="1" source="a1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=1;exitY=0.5;entryX=1;entryY=1;" target="p14" value="No — continue navigating">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce52" edge="1" parent="1" source="a2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="a3" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="470" y="2090" />
+              <mxPoint x="170" y="2090" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce53" edge="1" parent="1" source="a3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="a4" value="Yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce54" edge="1" parent="1" source="a3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=1;exitY=0.5;entryX=0.7;entryY=1;" target="p15" value="No — keep tracking others">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="640" y="2150" />
+              <mxPoint x="640" y="1310" />
+              <mxPoint x="522" y="1310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce55" edge="1" parent="1" source="a4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="a5" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce56" edge="1" parent="1" source="a5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="a6" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="470" y="2310" />
+              <mxPoint x="170" y="2310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="_RYGnufk8xuxoAzKlbty-1" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="460" width="200" x="3330" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_title" parent="_RYGnufk8xuxoAzKlbty-1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;fontSize=10;fontStyle=2;align=left;verticalAlign=top;spacing=6;" value="LEGEND (Page 2)" vertex="1">
+          <mxGeometry height="30" width="200" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_user" parent="_RYGnufk8xuxoAzKlbty-1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;align=center;verticalAlign=middle;" value="User / App action" vertex="1">
+          <mxGeometry height="40" width="200" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_backend" parent="_RYGnufk8xuxoAzKlbty-1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;" value="Backend / server process" vertex="1">
+          <mxGeometry height="40" width="200" y="90" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_decision" parent="_RYGnufk8xuxoAzKlbty-1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="Decision" vertex="1">
+          <mxGeometry height="50" width="200" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_alert" parent="_RYGnufk8xuxoAzKlbty-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;arcSize=20;" value="Convoy-wide alert" vertex="1">
+          <mxGeometry height="40" width="200" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_comm" parent="_RYGnufk8xuxoAzKlbty-1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0e3e6;strokeColor=#0e8088;fontSize=11;align=center;verticalAlign=middle;" value="Communication feature" vertex="1">
+          <mxGeometry height="40" width="200" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_sync" parent="_RYGnufk8xuxoAzKlbty-1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=center;verticalAlign=middle;" value="Sync / regroup service" vertex="1">
+          <mxGeometry height="40" width="200" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_remote" parent="_RYGnufk8xuxoAzKlbty-1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#cfe2f3;strokeColor=#3d85c6;fontSize=11;align=center;verticalAlign=middle;" value="Mesh / low-connectivity path" vertex="1">
+          <mxGeometry height="50" width="200" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_etiquette" parent="_RYGnufk8xuxoAzKlbty-1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ead1dc;strokeColor=#a64d79;fontSize=11;align=center;verticalAlign=middle;" value="Public-courtesy / share-the-road" vertex="1">
+          <mxGeometry height="50" width="200" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="_RYGnufk8xuxoAzKlbty-5" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="740" width="630" x="2920" y="1060" as="geometry" />
+        </mxCell>
+        <mxCell id="_RYGnufk8xuxoAzKlbty-3" connectable="0" parent="_RYGnufk8xuxoAzKlbty-5" style="group" value="" vertex="1">
+          <mxGeometry height="740" width="320" x="310" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_remote" parent="_RYGnufk8xuxoAzKlbty-3" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#b3b3b3;dashed=1;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;" value="REMOTE / MESH CONNECTIVITY SUBSYSTEM (Norway-pass scenario)" vertex="1">
+          <mxGeometry height="700" width="650" x="-330" as="geometry" />
+        </mxCell>
+        <mxCell id="r0" parent="_RYGnufk8xuxoAzKlbty-3" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="Cellular data lost for one or more members? (mountain pass, remote / severe-weather area)" vertex="1">
+          <mxGeometry height="90" width="280" x="10" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="r1" parent="_RYGnufk8xuxoAzKlbty-3" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#cfe2f3;strokeColor=#3d85c6;fontSize=11;align=center;verticalAlign=middle;" value="Switch affected vehicles to BLUETOOTH / WI-FI-DIRECT MESH RELAY — position &amp; pings hop device-to-device between nearby convoy members" vertex="1">
+          <mxGeometry height="110" width="280" x="10" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="r2" parent="_RYGnufk8xuxoAzKlbty-3" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#cfe2f3;strokeColor=#3d85c6;fontSize=11;align=center;verticalAlign=middle;" value="Mesh relay out of range (gap between vehicles too large)?" vertex="1">
+          <mxGeometry height="80" width="280" x="10" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="r3" parent="_RYGnufk8xuxoAzKlbty-3" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#cfe2f3;strokeColor=#3d85c6;fontSize=11;align=center;verticalAlign=middle;" value="Fallback: periodic SMS-based position beacon over the cellular voice/SMS network — often still works where mobile data doesn&#39;t" vertex="1">
+          <mxGeometry height="90" width="280" x="10" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="r5" parent="_RYGnufk8xuxoAzKlbty-3" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;" value="Connectivity restored for affected vehicle(s)?" vertex="1">
+          <mxGeometry height="80" width="280" x="10" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="ce40" edge="1" parent="_RYGnufk8xuxoAzKlbty-3" source="r0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="r1" value="Yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce41" edge="1" parent="_RYGnufk8xuxoAzKlbty-3" source="r1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="r2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce43" edge="1" parent="_RYGnufk8xuxoAzKlbty-3" source="r2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="r3" value="Yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce44" edge="1" parent="_RYGnufk8xuxoAzKlbty-3" source="r2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=1;exitY=0.5;entryX=1;entryY=0;" target="r5" value="No — mesh holding">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="350" y="350" />
+              <mxPoint x="350" y="600" />
+              <mxPoint x="220" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce45" edge="1" parent="_RYGnufk8xuxoAzKlbty-3" source="r3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="r5" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="150" y="570" />
+              <mxPoint x="150" y="570" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce48" edge="1" parent="_RYGnufk8xuxoAzKlbty-3" source="r5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=1;exitY=0.5;entryX=1;entryY=0.25;entryDx=0;entryDy=0;" target="r1" value="No">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="r4" parent="_RYGnufk8xuxoAzKlbty-5" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#cfe2f3;strokeColor=#3d85c6;fontSize=11;align=center;verticalAlign=middle;" value="TRAIL-GUIDE MODE: designate a lead vehicle (e.g. snowplow / rescue truck) — convoy follows its live breadcrumb trail instead of the pre-mapped route on closed or unmapped passes" vertex="1">
+          <mxGeometry height="120" width="280" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="ce42" edge="1" parent="_RYGnufk8xuxoAzKlbty-5" source="r1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="r4" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="140" y="235" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="_RYGnufk8xuxoAzKlbty-6" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="650" width="360" x="2070" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_sync" parent="_RYGnufk8xuxoAzKlbty-6" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#b3b3b3;dashed=1;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;container=0;" value="CONVOY SYNC &amp; REGROUP SUBSYSTEM" vertex="1">
+          <mxGeometry height="650" width="380" x="-20" as="geometry" />
+        </mxCell>
+        <mxCell id="s1" parent="_RYGnufk8xuxoAzKlbty-6" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;container=0;" value="Any vehicle beyond proximity threshold (e.g. &gt;500m) or has lost GPS/visual contact?" vertex="1">
+          <mxGeometry height="90" width="260" x="10" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="s2" parent="_RYGnufk8xuxoAzKlbty-6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;arcSize=20;container=0;" value="Notify Leader + that vehicle&#39;s assigned rear-buddy: &quot;Falling behind&quot;" vertex="1">
+          <mxGeometry height="70" width="260" x="10" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="s3" parent="_RYGnufk8xuxoAzKlbty-6" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=center;verticalAlign=middle;container=0;" value="Suggest nearest safe pull-over / regroup waypoint to the lagging vehicle" vertex="1">
+          <mxGeometry height="70" width="260" x="10" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="s4" parent="_RYGnufk8xuxoAzKlbty-6" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;container=0;" value="Speed variance across the convoy too high?" vertex="1">
+          <mxGeometry height="80" width="260" x="10" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="s5" parent="_RYGnufk8xuxoAzKlbty-6" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;arcSize=20;container=0;" value="Prompt: &quot;Adjust speed to stay with convoy pace&quot;" vertex="1">
+          <mxGeometry height="60" width="260" x="10" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="s6" parent="_RYGnufk8xuxoAzKlbty-6" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=center;verticalAlign=middle;container=0;" value="Buddy-System Engine: each driver is auto-paired to watch the vehicle directly behind them (&quot;responsibility-to-the-rear&quot; rule)" vertex="1">
+          <mxGeometry height="90" width="260" x="10" y="540" as="geometry" />
+        </mxCell>
+        <mxCell id="ce20" edge="1" parent="_RYGnufk8xuxoAzKlbty-6" source="s1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="s2" value="Yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce21" edge="1" parent="_RYGnufk8xuxoAzKlbty-6" source="s2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="s3" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce22" edge="1" parent="_RYGnufk8xuxoAzKlbty-6" source="s1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="s4" value="No">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="290" y="159.89" />
+              <mxPoint x="290" y="359.89" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce23" edge="1" parent="_RYGnufk8xuxoAzKlbty-6" source="s3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="s4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce24" edge="1" parent="_RYGnufk8xuxoAzKlbty-6" source="s4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="s5" value="Yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce25" edge="1" parent="_RYGnufk8xuxoAzKlbty-6" source="s4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=1;exitY=0.5;entryX=0.75;entryY=0;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" target="s6" value="No">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="290" y="400" />
+              <mxPoint x="290" y="530" />
+              <mxPoint x="205" y="530" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce26" edge="1" parent="_RYGnufk8xuxoAzKlbty-6" source="s5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="s6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce27" edge="1" parent="_RYGnufk8xuxoAzKlbty-6" source="s6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;exitX=1;exitY=0.5;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="s1" value="continuous monitoring loop">
+          <mxGeometry relative="1" x="0.4396" as="geometry">
+            <mxPoint as="offset" />
+            <Array as="points">
+              <mxPoint x="320" y="585" />
+              <mxPoint x="320" y="50" />
+              <mxPoint x="140" y="50" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="_RYGnufk8xuxoAzKlbty-8" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="930" width="300" x="1510" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_comm" parent="_RYGnufk8xuxoAzKlbty-8" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#b3b3b3;dashed=1;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;container=0;" value="CONVOY COMMUNICATION SUBSYSTEM" vertex="1">
+          <mxGeometry height="930" width="430" x="-130" as="geometry" />
+        </mxCell>
+        <mxCell id="c1" parent="_RYGnufk8xuxoAzKlbty-8" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0e3e6;strokeColor=#0e8088;fontSize=11;align=center;verticalAlign=middle;container=0;" value="Push-to-talk: tap &amp; hold mic icon to broadcast voice to the convoy channel (CB-radio style)" vertex="1">
+          <mxGeometry height="82.72727272727273" width="260" x="10" y="72.38636363636364" as="geometry" />
+        </mxCell>
+        <mxCell id="c3" parent="_RYGnufk8xuxoAzKlbty-8" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0e3e6;strokeColor=#0e8088;fontSize=11;align=center;verticalAlign=middle;container=0;" value="Instantly broadcast the voice clip / signal / message to EVERY convoy member (private channel, not the public crowdsource feed)" vertex="1">
+          <mxGeometry height="93.06818181818183" width="260" x="10" y="289.54545454545456" as="geometry" />
+        </mxCell>
+        <mxCell id="c4" parent="_RYGnufk8xuxoAzKlbty-8" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0e3e6;strokeColor=#0e8088;fontSize=11;align=center;verticalAlign=middle;container=0;" value="Group text chat thread (auto-read aloud by voice assistant while driving)" vertex="1">
+          <mxGeometry height="72.38636363636364" width="260" x="10" y="403.29545454545456" as="geometry" />
+        </mxCell>
+        <mxCell id="c5" parent="_RYGnufk8xuxoAzKlbty-8" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;arcSize=20;container=0;" value="SOS button: instantly shares exact location + alert with entire convoy + optional emergency contacts" vertex="1">
+          <mxGeometry height="82.72727272727273" width="260" x="10" y="496.3636363636364" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" parent="_RYGnufk8xuxoAzKlbty-8" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=center;verticalAlign=middle;container=0;" value="Gap to vehicle ahead/behind too small for too long? (blocking public traffic flow)" vertex="1">
+          <mxGeometry height="93.06818181818183" width="260" x="10" y="610.1136363636364" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" parent="_RYGnufk8xuxoAzKlbty-8" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ead1dc;strokeColor=#a64d79;fontSize=11;align=center;verticalAlign=middle;container=0;" value="Courtesy reminder: &quot;Leave a gap so other traffic can safely merge or overtake&quot;" vertex="1">
+          <mxGeometry height="72.38636363636364" width="260" x="10" y="723.8636363636364" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" parent="_RYGnufk8xuxoAzKlbty-8" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ead1dc;strokeColor=#a64d79;fontSize=11;align=center;verticalAlign=middle;container=0;" value="Optional: broadcast a &quot;Slow-moving convoy ahead&quot; notice to nearby NON-convoy Maps users on the same road" vertex="1">
+          <mxGeometry height="93.06818181818183" width="260" x="10" y="816.9318181818182" as="geometry" />
+        </mxCell>
+        <mxCell id="ce30" edge="1" parent="_RYGnufk8xuxoAzKlbty-8" source="c1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" target="c3" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="205" y="196.47727272727275" />
+              <mxPoint x="205" y="196.47727272727275" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ce32" edge="1" parent="_RYGnufk8xuxoAzKlbty-8" source="c3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="c4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce33" edge="1" parent="_RYGnufk8xuxoAzKlbty-8" source="c4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="c5" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce34" edge="1" parent="_RYGnufk8xuxoAzKlbty-8" source="c5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="e1" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce35" edge="1" parent="_RYGnufk8xuxoAzKlbty-8" source="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="e2" value="Yes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce37" edge="1" parent="_RYGnufk8xuxoAzKlbty-8" source="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="e3" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="c2" parent="_RYGnufk8xuxoAzKlbty-8" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#b0e3e6;strokeColor=#0e8088;fontSize=11;align=center;verticalAlign=middle;container=0;" value="Quick Signal Pings — one tap: &quot;Pulling over&quot;, &quot;Fuel stop&quot;, &quot;Flat tire&quot;, &quot;Police ahead&quot;, &quot;Merging traffic, slow down&quot;" vertex="1">
+          <mxGeometry height="93.06818181818183" width="260" x="-80" y="165.45454545454547" as="geometry" />
+        </mxCell>
+        <mxCell id="ce31" edge="1" parent="_RYGnufk8xuxoAzKlbty-8" source="c2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="c3" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="140" y="268.8636363636364" />
+              <mxPoint x="140" y="268.8636363636364" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="_RYGnufk8xuxoAzKlbty-10" connectable="0" parent="1" style="group" value="" vertex="1">
+          <mxGeometry height="1500" width="300" x="320" as="geometry" />
+        </mxCell>
+        <mxCell id="lane_backend" parent="_RYGnufk8xuxoAzKlbty-10" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#b3b3b3;dashed=1;fontSize=13;fontStyle=1;verticalAlign=top;align=left;spacingLeft=8;spacingTop=4;" value="BACKEND / SERVICES LAYER" vertex="1">
+          <mxGeometry height="1500" width="300" as="geometry" />
+        </mxCell>
+        <mxCell id="p5" parent="_RYGnufk8xuxoAzKlbty-10" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;" value="Convoy Session Service creates/ validates a unique Convoy ID + real-time group channel (WebSocket room)" vertex="1">
+          <mxGeometry height="90" width="260" x="20" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="p6" parent="_RYGnufk8xuxoAzKlbty-10" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;" value="Add member to roster; broadcast updated roster (name, vehicle icon/color, role) to all members" vertex="1">
+          <mxGeometry height="80" width="260" x="20" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="p11" parent="_RYGnufk8xuxoAzKlbty-10" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;" value="Leader&#39;s destination sent to core Routing Engine (Page 1); resulting route + ETA pushed as one shared polyline to every convoy member" vertex="1">
+          <mxGeometry height="100" width="260" x="20" y="940" as="geometry" />
+        </mxCell>
+        <mxCell id="p13" parent="_RYGnufk8xuxoAzKlbty-10" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;" value="Convoy Sync Service opens a continuous live-location channel shared by every member" vertex="1">
+          <mxGeometry height="80" width="260" x="20" y="1060" as="geometry" />
+        </mxCell>
+        <mxCell id="p15" parent="_RYGnufk8xuxoAzKlbty-10" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;align=center;verticalAlign=middle;" value="Continuous GPS broadcast &amp; map-matching for every vehicle in the convoy" vertex="1">
+          <mxGeometry height="80" width="260" x="20" y="1160" as="geometry" />
+        </mxCell>
+        <mxCell id="ce6" edge="1" parent="_RYGnufk8xuxoAzKlbty-10" source="p5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce14" edge="1" parent="_RYGnufk8xuxoAzKlbty-10" source="p11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p13" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ce16" edge="1" parent="_RYGnufk8xuxoAzKlbty-10" source="p13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;jettySize=auto;orthogonalLoop=1;fontSize=10;" target="p15" value="">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
